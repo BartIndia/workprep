@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>WorkPrep</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ================================================
+   RESET & VARIABLES
+================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg:      #0f172a;
+  --bg2:     #1e293b;
+  --bg3:     #273449;
+  --panel:   #1a2744;
+  --border:  #334155;
+  --accent:  #3b82f6;
+  --a2:      #2563eb;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --warn:    #f59e0b;
+  --purple:  #a855f7;
+  --text:    #f1f5f9;
+  --t2:      #94a3b8;
+  --t3:      #475569;
+  --fh:      'Syne', sans-serif;
+  --fm:      'JetBrains Mono', monospace;
+  --shadow:  0 4px 24px rgba(0,0,0,0.4);
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--fh);
+}
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ================================================
+   LAYOUT — DESKTOP
+================================================ */
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+#topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.logo { font-size: 17px; font-weight: 700; letter-spacing: 2px; flex-shrink: 0; }
+.logo span { color: var(--accent); }
+
+#topbar-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  justify-content: center;
+}
+
+#day-status {
+  font-family: var(--fm);
+  font-size: 12px;
+  color: var(--t2);
+}
+
+#day-timer {
+  font-family: var(--fm);
+  font-size: 14px;
+  color: var(--green);
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.2);
+  padding: 3px 10px;
+  border-radius: 5px;
+}
+
+#topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+#main-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+}
+
+/* Desktop: 3 columns */
+#col-left {
+  width: 240px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+#col-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+#col-right {
+  width: 260px;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* ================================================
+   MOBILE LAYOUT
+   Hidden on desktop, shown on mobile
+================================================ */
+#mobile-nav {
+  display: none;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mob-nav-row {
+  display: flex;
+}
+
+.mnb {
+  flex: 1;
+  padding: 10px 4px;
+  background: none;
+  border: none;
+  color: var(--t3);
+  font-family: var(--fh);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: color .15s;
+  position: relative;
+}
+
+.mnb svg { width: 18px; height: 18px; }
+.mnb.active { color: var(--accent); }
+.mnb.active::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  #col-left, #col-right { display: none; }
+  #col-center { display: none; }
+  #mobile-nav { display: block; }
+
+  /* Mobile panels */
+  .mob-panel { display: none; flex: 1; overflow-y: auto; padding: 14px 14px 80px; }
+  .mob-panel.active { display: block; }
+}
+
+@media (min-width: 769px) {
+  #col-left, #col-center, #col-right { display: flex !important; }
+}
+
+/* ================================================
+   COLUMN HEADERS
+================================================ */
+.col-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.col-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--t2);
+}
+
+.col-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+/* ================================================
+   BUTTONS
+================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--fh);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: all .15s;
+  -webkit-user-select: none;
+}
+
+.btn:active { transform: scale(0.97); }
+.bp { background: var(--accent); color: #fff; }
+.bp:hover { background: var(--a2); }
+.bg { background: var(--green); color: #fff; }
+.br { background: var(--red); color: #fff; }
+.bw { background: var(--warn); color: #fff; }
+.bgh { background: transparent; color: var(--t2); border: 1px solid var(--border); }
+.bgh:hover { background: var(--bg3); color: var(--text); }
+.bsm { padding: 4px 9px; font-size: 11px; }
+.bfull { width: 100%; }
+
+/* ================================================
+   VEHICLE CARDS — LEFT PANEL
+================================================ */
+.vc {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 7px;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.vc::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 100%;
+}
+
+.vc.active-v::before { background: var(--green); }
+.vc.paused-v::before { background: var(--warn); }
+.vc.charging-v::before { background: var(--purple); }
+.vc.updating-v::before { background: var(--accent); }
+.vc.done-v::before { background: var(--t3); }
+.vc.waiting-v::before { background: var(--t2); }
+
+.vc.selected { border-color: var(--accent); background: rgba(59,130,246,0.08); }
+.vc:hover { border-color: var(--t2); }
+
+.vc-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.vc-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.vc-wo { font-family: var(--fm); font-size: 10px; color: var(--accent); margin-top: 1px; }
+.vc-time { font-family: var(--fm); font-size: 13px; color: var(--green); }
+.vc-time.paused { color: var(--warn); }
+.vc-time.done { color: var(--t3); }
+.vc-status { font-size: 10px; color: var(--t2); margin-top: 4px; }
+
+/* Status badge */
+.sbadge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-family: var(--fm);
+}
+
+.s-active   { background: rgba(34,197,94,0.15);  color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+.s-paused   { background: rgba(245,158,11,0.15); color: var(--warn);   border: 1px solid rgba(245,158,11,0.3); }
+.s-charging { background: rgba(168,85,247,0.15); color: var(--purple); border: 1px solid rgba(168,85,247,0.3); }
+.s-updating { background: rgba(59,130,246,0.15); color: var(--accent); border: 1px solid rgba(59,130,246,0.3); }
+.s-done     { background: rgba(71,85,105,0.3);   color: var(--t3);     border: 1px solid var(--border); }
+.s-waiting  { background: rgba(148,163,184,0.1); color: var(--t2);     border: 1px solid var(--border); }
+
+/* Progress bar */
+.pbar { height: 2px; background: var(--bg3); border-radius: 1px; margin-top: 6px; overflow: hidden; }
+.pfill { height: 100%; background: var(--accent); border-radius: 1px; transition: width .3s; }
+.pfill.done { background: var(--green); }
+
+/* ================================================
+   CENTER PANEL — JOB DETAIL
+================================================ */
+#job-detail {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: 80px;
+}
+
+#job-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--t3);
+  text-align: center;
+}
+
+.empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .4; }
+.empty-text { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+.empty-sub { font-size: 12px; margin-top: 6px; }
+
+/* Job header */
+.job-header {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.job-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.job-meta { font-size: 12px; color: var(--t2); font-family: var(--fm); }
+.job-timer { font-family: var(--fm); font-size: 28px; color: var(--green); margin: 10px 0; }
+.job-timer.paused { color: var(--warn); }
+
+.job-actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+
+/* Task section */
+.task-section { margin-bottom: 16px; }
+.task-cat {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 6px 0 4px;
+  border-bottom: 1px solid rgba(59,130,246,0.2);
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.task-cat-count { color: var(--t3); font-weight: 400; }
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(51,65,85,0.4);
+  cursor: pointer;
+  transition: background .1s;
+}
+
+.task-item:last-child { border-bottom: none; }
+.task-item:hover { background: rgba(255,255,255,0.02); border-radius: 4px; }
+
+.task-check {
+  width: 20px; height: 20px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+
+.task-item.checked .task-check {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.task-label { font-size: 13px; flex: 1; }
+.task-item.checked .task-label { text-decoration: line-through; color: var(--t3); }
+.task-custom { font-size: 10px; color: var(--t3); font-family: var(--fm); }
+
+/* Data field task */
+.data-field-box {
+  background: var(--bg3);
+  border-radius: 6px;
+  padding: 10px;
+  margin: 4px 0 8px 30px;
+}
+
+.df-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.df-row:last-child { margin-bottom: 0; }
+.df-key { font-size: 11px; color: var(--t2); width: 120px; flex-shrink: 0; }
+.df-input {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  color: var(--text);
+  font-family: var(--fm);
+  font-size: 12px;
+  outline: none;
+}
+.df-input:focus { border-color: var(--accent); }
+
+/* Waiting timer display */
+.waiting-box {
+  background: rgba(168,85,247,0.08);
+  border: 1px solid rgba(168,85,247,0.3);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 4px 0 8px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.waiting-timer { font-family: var(--fm); font-size: 18px; color: var(--purple); }
+.waiting-label { font-size: 11px; color: var(--t2); }
+
+/* ================================================
+   RIGHT PANEL
+================================================ */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 12px; }
+.stat-box { background: var(--bg3); border-radius: 6px; padding: 9px; text-align: center; }
+.stat-val { font-family: var(--fm); font-size: 20px; color: var(--text); }
+.stat-val.g { color: var(--green); }
+.stat-lbl { font-size: 10px; color: var(--t3); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+.notif-item {
+  background: var(--bg3);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-left: 3px solid var(--warn);
+}
+
+.notif-title { font-size: 11px; font-weight: 600; color: var(--warn); }
+.notif-sub { font-size: 10px; color: var(--t2); margin-top: 2px; font-family: var(--fm); }
+
+.timeline-item {
+  display: flex;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(51,65,85,0.3);
+  font-size: 11px;
+}
+
+.timeline-time { font-family: var(--fm); color: var(--t3); width: 45px; flex-shrink: 0; }
+.timeline-text { color: var(--t2); }
+
+/* ================================================
+   START DAY SCREEN
+================================================ */
+#start-day-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+  text-align: center;
+}
+
+.start-logo { font-size: 48px; font-weight: 800; letter-spacing: 8px; margin-bottom: 6px; }
+.start-logo span { color: var(--accent); }
+.start-sub { font-size: 12px; color: var(--t3); font-family: var(--fm); letter-spacing: 3px; margin-bottom: 8px; }
+.start-date { font-size: 13px; color: var(--t2); font-family: var(--fm); margin-bottom: 32px; }
+
+.start-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  width: 100%;
+  max-width: 380px;
+}
+
+/* ================================================
+   MODALS
+================================================ */
+.mo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 100;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.mo.open { display: flex; }
+
+.md {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-width: 520px;
+  padding: 20px;
+  max-height: 92vh;
+  overflow-y: auto;
+  animation: slideup .25s ease;
+}
+
+@keyframes slideup {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.mo-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.mo-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+/* ================================================
+   FORM ELEMENTS
+================================================ */
+.ig { margin-bottom: 13px; }
+.il {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--t3);
+  margin-bottom: 5px;
+}
+
+.iif {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-family: var(--fh);
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.iif:focus { border-color: var(--accent); }
+.iif::placeholder { color: var(--t3); }
+select.iif { appearance: none; cursor: pointer; }
+textarea.iif { min-height: 70px; resize: vertical; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ================================================
+   SCANNER
+================================================ */
+#scan-box {
+  position: relative;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 4/3;
+  margin-bottom: 10px;
+}
+
+#scan-vid { width: 100%; height: 100%; object-fit: cover; }
+
+.scan-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.scan-frame {
+  width: 65%; aspect-ratio: 3/1; position: relative;
+}
+
+.scan-corner {
+  position: absolute;
+  width: 20px; height: 20px;
+  border-color: var(--accent);
+  border-style: solid;
+}
+
+.sc-tl { top: 0; left: 0;  border-width: 2px 0 0 2px; }
+.sc-tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+.sc-bl { bottom: 0; left: 0;  border-width: 0 0 2px 2px; }
+.sc-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+.scan-line {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: scanline 2s ease-in-out infinite;
+}
+
+@keyframes scanline { 0%, 100% { top: 5%; } 50% { top: 95%; } }
+
+/* ================================================
+   TOAST
+================================================ */
+#toast {
+  position: fixed;
+  top: 60px; left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  background: var(--bg3);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--fh);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 6px;
+  z-index: 300;
+  opacity: 0;
+  transition: all .25s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ================================================
+   CONFIRM DIALOG
+================================================ */
+#confirm-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+#confirm-overlay.open { display: flex; }
+
+.confirm-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 340px;
+  width: 90%;
+}
+
+.confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.confirm-msg { font-size: 13px; color: var(--t2); margin-bottom: 20px; line-height: 1.6; }
+.confirm-btns { display: flex; gap: 8px; }
+
+/* ================================================
+   WAITING TIMER NOTIFICATION
+================================================ */
+.timer-notif {
+  position: fixed;
+  top: 60px; right: 16px;
+  background: var(--bg2);
+  border: 1px solid var(--purple);
+  border-radius: 10px;
+  padding: 12px 16px;
+  z-index: 150;
+  max-width: 280px;
+  animation: slidein .3s ease;
+  display: none;
+}
+
+@keyframes slidein { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.timer-notif.show { display: block; }
+.tn-title { font-size: 13px; font-weight: 700; color: var(--purple); margin-bottom: 4px; }
+.tn-msg { font-size: 12px; color: var(--t2); }
+
+/* ================================================
+   CHIPS
+================================================ */
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip {
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  color: var(--t3);
+  background: var(--bg3);
+  -webkit-user-select: none;
+}
+.chip.sel { background: rgba(59,130,246,0.15); border-color: var(--accent); color: var(--accent); }
+
+/* ================================================
+   MISC
+================================================ */
+.divider { height: 1px; background: var(--border); margin: 12px 0; }
+.helper { font-size: 11px; color: var(--t3); margin-top: 4px; line-height: 1.5; }
+.tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; background: rgba(59,130,246,0.1); color: var(--accent); border: 1px solid rgba(59,130,246,0.2); font-family: var(--fm); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">Work<span>Prep</span></div>
+  <div id="topbar-center">
+    <div id="day-status" style="color:var(--t3);">Geen actieve dag</div>
+    <div id="day-timer" style="display:none;">⏱ 00:00:00</div>
+  </div>
+  <div id="topbar-right">
+    <button class="btn bgh bsm" id="break-btn" style="display:none;" onclick="toggleBreak()">☕ Pauze</button>
+    <div style="font-size:12px;color:var(--t2);font-family:var(--fm);" id="user-name"></div>
+    <button class="btn bgh bsm" onclick="doLogout()">↩ Uitloggen</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main-content">
+
+  <!-- LEFT COLUMN — Vehicle list -->
+  <div id="col-left">
+    <div class="col-header">
+      <div class="col-title" id="left-title">Voertuigen</div>
+      <button class="btn bp bsm" id="add-vehicle-btn" style="display:none;" onclick="openAddVehicle()">+</button>
+    </div>
+    <div class="col-body" id="vehicle-list">
+      <div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12px;">Start eerst een werkdag</div>
+    </div>
+  </div>
+
+  <!-- CENTER COLUMN -->
+  <div id="col-center">
+
+    <!-- START DAY SCREEN -->
+    <div id="start-day-screen">
+      <div class="start-logo">Work<span>Prep</span></div>
+      <div class="start-sub">WORKSHOP MANAGEMENT</div>
+      <div class="start-date" id="start-date"></div>
+      <div class="start-card">
+        <div class="ig">
+          <label class="il">Klant van vandaag</label>
+          <select class="iif" id="sd-customer">
+            <option value="">— Selecteer klant —</option>
+          </select>
+        </div>
+        <div class="ig">
+          <label class="il">Geplande starttijd</label>
+          <input type="time" class="iif" id="sd-start" value="08:00">
+        </div>
+        <div class="ig">
+          <label class="il">Geplande eindtijd</label>
+          <input type="time" class="iif" id="sd-end" value="17:00">
+        </div>
+        <button class="btn bp bfull" onclick="startDay()" style="margin-top:8px;padding:12px;">▶ Werkdag Starten</button>
+        <button class="btn bgh bfull" onclick="openAddCustomer()" style="margin-top:8px;">+ Nieuwe klant toevoegen</button>
+      </div>
+    </div>
+
+    <!-- JOB DETAIL (hidden until vehicle selected) -->
+    <div id="job-detail" style="display:none;">
+      <div id="job-empty">
+        <div class="empty-icon">🚗</div>
+        <div class="empty-text">Geen voertuig geselecteerd</div>
+        <div class="empty-sub">Selecteer een voertuig links of voeg een nieuw toe</div>
+      </div>
+      <div id="job-content" style="display:none;"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN — Overview & notifications -->
+  <div id="col-right">
+    <div class="col-header">
+      <div class="col-title">Dag Overzicht</div>
+    </div>
+    <div class="col-body">
+      <div class="stat-grid" id="right-stats">
+        <div class="stat-box"><div class="stat-val">0</div><div class="stat-lbl">Voertuigen</div></div>
+        <div class="stat-box"><div class="stat-val g">0</div><div class="stat-lbl">Klaar</div></div>
+        <div class="stat-box"><div class="stat-val" id="rs-time">00:00</div><div class="stat-lbl">Werktijd</div></div>
+        <div class="stat-box"><div class="stat-val" id="rs-tasks">0/0</div><div class="stat-lbl">Taken</div></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:8px;">Notificaties</div>
+      <div id="notifications-list">
+        <div style="font-size:11px;color:var(--t3);padding:8px 0;">Geen notificaties</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:8px;">Tijdlijn</div>
+      <div id="timeline-list">
+        <div style="font-size:11px;color:var(--t3);padding:8px 0;">Nog geen activiteit</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main-content -->
+
+<!-- MOBILE NAV -->
+<div id="mobile-nav">
+  <div class="mob-nav-row">
+    <button class="mnb active" id="mnb-vehicles" onclick="showMobPanel('vehicles')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="8" width="20" height="12" rx="2"/><path d="M6 8V6a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+      Voertuigen
+    </button>
+    <button class="mnb" id="mnb-tasks" onclick="showMobPanel('tasks')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Taken
+    </button>
+    <button class="mnb" id="mnb-overview" onclick="showMobPanel('overview')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Overzicht
+    </button>
+    <button class="mnb" id="mnb-scan" onclick="openScanner('wo')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M14 17v3h3M17 14h3"/></svg>
+      Scan
+    </button>
+  </div>
+</div>
+
+<!-- MOBILE PANELS -->
+<div class="mob-panel active" id="mob-vehicles"></div>
+<div class="mob-panel" id="mob-tasks"></div>
+<div class="mob-panel" id="mob-overview"></div>
+
+</div><!-- end app -->
+
+<!-- ================================================
+     MODALS
+================================================ -->
+
+<!-- ADD VEHICLE MODAL -->
+<div class="mo" id="m-vehicle">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title" id="mv-title">🚗 Voertuig Toevoegen</div>
+
+    <div class="two-col">
+      <div class="ig">
+        <label class="il">Merk</label>
+        <select class="iif" id="v-brand" onchange="onBrandChange()">
+          <option value="">— Merk —</option>
+        </select>
+      </div>
+      <div class="ig">
+        <label class="il">Model</label>
+        <select class="iif" id="v-model" onchange="onModelChange()">
+          <option value="">— Model —</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="ig">
+      <label class="il">Variant / Motorisatie</label>
+      <select class="iif" id="v-variant">
+        <option value="">— Variant —</option>
+      </select>
+    </div>
+
+    <div class="ig">
+      <label class="il">Werkorder #</label>
+      <div style="display:flex;gap:7px;">
+        <input type="text" class="iif" id="v-wo" placeholder="Werkordernummer" style="flex:1;">
+        <button class="btn bgh bsm" onclick="openScanner('wo')" style="padding:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M14 17v3h3M17 14h3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="ig">
+      <label class="il">Chassisnummer (VIN)</label>
+      <div style="display:flex;gap:7px;">
+        <input type="text" class="iif" id="v-vin" placeholder="17-karakter VIN" style="flex:1;text-transform:uppercase;" maxlength="17">
+        <button class="btn bgh bsm" onclick="openScanner('vin')" style="padding:8px;" title="Barcode scannen">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="5" x2="3" y2="19"/><line x1="7" y1="5" x2="7" y2="19"/><line x1="11" y1="5" x2="11" y2="19"/><line x1="15" y1="5" x2="15" y2="19"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        </button>
+        <button class="btn bgh bsm" onclick="openVinOCR()" style="padding:8px;" title="Tekst scannen via camera/foto">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        </button>
+      </div>
+      <div class="helper">Barcode = streepjescode scannen · Camera = tekst lezen via foto of live scan</div>
+    </div>
+
+    <div class="ig">
+      <label class="il">Kenteken</label>
+      <input type="text" class="iif" id="v-plate" placeholder="1-ABC-234" style="text-transform:uppercase;">
+    </div>
+
+    <div class="ig">
+      <label class="il">Notities</label>
+      <textarea class="iif" id="v-notes" placeholder="Optionele notities..."></textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-vehicle')">Annuleren</button>
+      <button class="btn bg" style="flex:2;" id="mv-btn" onclick="saveVehicle()">▶ Starten</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CUSTOMER MODAL -->
+<div class="mo" id="m-customer">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title">👥 Klant Toevoegen</div>
+    <div class="ig">
+      <label class="il">Naam</label>
+      <input type="text" class="iif" id="c-name" placeholder="bv. Volvo Dealer Antwerpen">
+    </div>
+    <div class="ig">
+      <label class="il">Adres</label>
+      <input type="text" class="iif" id="c-address" placeholder="Straat en gemeente">
+    </div>
+    <div class="ig">
+      <label class="il">BTW nummer</label>
+      <input type="text" class="iif" id="c-vat" placeholder="BE 0123.456.789">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-customer')">Annuleren</button>
+      <button class="btn bp" style="flex:2;" onclick="saveCustomer()">Klant Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TASK MODAL -->
+<div class="mo" id="m-task">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title">➕ Taak Toevoegen</div>
+    <div class="ig">
+      <label class="il">Omschrijving</label>
+      <input type="text" class="iif" id="t-label" placeholder="Beschrijf de taak">
+    </div>
+    <div class="ig">
+      <label class="il">Categorie</label>
+      <select class="iif" id="t-cat">
+        <option value="PDI">PDI</option>
+        <option value="Software">Software</option>
+        <option value="Opties">Opties / Pakketten</option>
+        <option value="Garantie">Garantie</option>
+        <option value="Mechanisch">Mechanisch</option>
+        <option value="Carrosserie">Carrosserie</option>
+        <option value="Admin">Admin</option>
+        <option value="Overige">Overige</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-task')">Annuleren</button>
+      <button class="btn bp" style="flex:2;" onclick="saveTask()">Taak Toevoegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAITING TIMER MODAL -->
+<div class="mo" id="m-waiting">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title" id="wt-title">⏳ Wachttimer Instellen</div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6;" id="wt-desc">Stel in hoe lang het duurt.</p>
+    <div class="ig">
+      <label class="il">Verwachte duur (minuten)</label>
+      <input type="number" class="iif" id="wt-duration" value="30" min="1" max="480">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-waiting')">Annuleren</button>
+      <button class="btn bp" style="flex:2;" id="wt-btn" onclick="startWaitingTimer()">Timer Starten</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCANNER MODAL -->
+<div class="mo" id="m-scan">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title" id="scan-title">📷 Scannen</div>
+    <div id="scan-box">
+      <video id="scan-vid" autoplay playsinline muted></video>
+      <div class="scan-overlay">
+        <div class="scan-frame">
+          <div class="scan-corner sc-tl"></div>
+          <div class="scan-corner sc-tr"></div>
+          <div class="scan-corner sc-bl"></div>
+          <div class="scan-corner sc-br"></div>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+    </div>
+    <div id="scan-result" style="display:none;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:6px;padding:8px;font-family:var(--fm);font-size:12px;color:var(--accent);margin-bottom:8px;word-break:break-all;"></div>
+    <div style="display:flex;gap:7px;margin-top:8px;">
+      <input type="text" class="iif" id="scan-manual" placeholder="Of typ handmatig..." style="flex:1;">
+      <button class="btn bp bsm" onclick="manualScan()">OK</button>
+    </div>
+    <button class="btn bgh bfull" style="margin-top:7px;" onclick="closeScan()">Annuleren</button>
+  </div>
+</div>
+
+<!-- VIN OCR MODAL -->
+<div class="mo" id="m-vin-ocr">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title">📸 VIN Tekst Herkenning</div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.6;">
+      Maak een foto van het chassisnummer of kies er een uit je galerij. De app leest de tekst automatisch.
+    </p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="btn bp" style="flex:1;" onclick="captureVinPhoto('camera')">📷 Camera</button>
+      <button class="btn bgh" style="flex:1;" onclick="captureVinPhoto('gallery')">🖼 Galerij</button>
+    </div>
+    <input type="file" id="vin-file-input" accept="image/*" style="display:none;" onchange="processVinImage(this)">
+    <div id="vin-ocr-preview" style="display:none;">
+      <img id="vin-preview-img" style="width:100%;border-radius:6px;margin-bottom:10px;max-height:200px;object-fit:contain;">
+      <div id="vin-ocr-result" style="background:var(--bg3);border-radius:6px;padding:10px;margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:5px;">Herkende tekst:</div>
+        <div id="vin-ocr-text" style="font-family:var(--fm);font-size:14px;color:var(--accent);letter-spacing:2px;"></div>
+      </div>
+      <div class="ig">
+        <label class="il">VIN (controleer en corrigeer indien nodig)</label>
+        <input type="text" class="iif" id="vin-ocr-input" placeholder="17-karakter VIN" maxlength="17" style="text-transform:uppercase;font-family:var(--fm);letter-spacing:2px;">
+      </div>
+      <button class="btn bg bfull" onclick="applyVinOCR()">✓ VIN Bevestigen</button>
+    </div>
+    <div id="vin-ocr-loading" style="display:none;text-align:center;padding:20px;color:var(--t2);">
+      <div style="font-size:13px;">Tekst herkennen...</div>
+    </div>
+    <button class="btn bgh bfull" style="margin-top:8px;" onclick="closeModal('m-vin-ocr')">Annuleren</button>
+  </div>
+</div>
+
+<!-- ADJUST TIME MODAL -->
+<div class="mo" id="m-adjust-time">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title">⏱ Tijd Aanpassen</div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.6;" id="adj-desc">Pas de start- of eindtijd aan van deze sessie.</p>
+    <div class="two-col">
+      <div class="ig">
+        <label class="il">Starttijd</label>
+        <input type="datetime-local" class="iif" id="adj-start">
+      </div>
+      <div class="ig">
+        <label class="il">Eindtijd</label>
+        <input type="datetime-local" class="iif" id="adj-end">
+      </div>
+    </div>
+    <div class="ig">
+      <label class="il">Reden voor aanpassing</label>
+      <input type="text" class="iif" id="adj-reason" placeholder="bv. vergeten te starten">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-adjust-time')">Annuleren</button>
+      <button class="btn bp" style="flex:2;" onclick="saveTimeAdjustment()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DIALOG -->
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="conf-title">Bevestigen</div>
+    <div class="confirm-msg" id="conf-msg"></div>
+    <div class="confirm-btns">
+      <button class="btn bgh" style="flex:1;" onclick="closeConfirm()">Annuleren</button>
+      <button class="btn br" style="flex:1;" id="conf-ok">Bevestigen</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAITING TIMER NOTIFICATION -->
+<div class="timer-notif" id="timer-notif">
+  <div class="tn-title" id="tn-title">⏰ Timer klaar!</div>
+  <div class="tn-msg" id="tn-msg"></div>
+  <button class="btn bgh bsm" style="margin-top:8px;width:100%;" onclick="dismissTimerNotif()">OK</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ================================================
+// SUPABASE CONFIG
+// ================================================
+const SUPABASE_URL = 'https://tiavzsywbiwajvxknqof.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_aunpvg532iEoEbvOJ08-DA_XOR1rQU4';
+const ANTHROPIC_KEY = ''; // Add your Anthropic API key here for VIN OCR
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ================================================
+// APP STATE
+// ================================================
+const S = {
+  user:        null,
+  orgId:       null,
+  workDay:     null,
+  customer:    null,
+  customers:   [],
+  brands:      [],
+  models:      [],
+  variants:    [],
+  jobs:        [],
+  sessions:    {},      // jobId -> active session
+  timers:      {},      // jobId -> { start, elapsed, interval }
+  waitTimers:  {},      // jobId -> { type, start, expected, interval }
+  selectedJob: null,
+  scanTarget:  null,    // 'wo' or 'vin'
+  scanStream:  null,
+  editJobId:   null,
+  timeline:    [],
+  onBreak:     false,
+  breakStart:  null,
+  totalBreak:  0,
+  dayTimerInt: null,
+  wtType:      null,    // waiting timer type being set
+};
+
+// ================================================
+// INIT
+// ================================================
+async function init() {
+  // Check authentication
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    window.location.href = 'workprep-login.html';
+    return;
+  }
+
+  S.user = session.user;
+
+  // Load user profile
+  const { data: profile } = await sb.from('users')
+    .select('*, organizations(*)')
+    .eq('id', S.user.id)
+    .single();
+
+  if (profile) {
+    S.orgId = profile.organization_id;
+    document.getElementById('user-name').textContent = profile.full_name;
+  }
+
+  // Set current date
+  const now = new Date();
+  document.getElementById('start-date').textContent =
+    now.toLocaleDateString('nl-BE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  // Load initial data
+  await Promise.all([
+    loadCustomers(),
+    loadBrands(),
+  ]);
+
+  // Check for existing open work day today
+  await checkExistingWorkDay();
+
+  // Set up real-time subscription for jobs
+  setupRealtimeSubscription();
+}
+
+// ================================================
+// LOAD DATA
+// ================================================
+async function loadCustomers() {
+  const { data } = await sb.from('customers')
+    .select('*')
+    .eq('organization_id', S.orgId)
+    .eq('is_active', true)
+    .order('name');
+
+  S.customers = data || [];
+
+  // Populate customer select
+  const sel = document.getElementById('sd-customer');
+  sel.innerHTML = '<option value="">— Selecteer klant —</option>' +
+    S.customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+async function loadBrands() {
+  const { data } = await sb.from('brands')
+    .select('*')
+    .eq('organization_id', S.orgId)
+    .order('name');
+
+  S.brands = data || [];
+
+  const sel = document.getElementById('v-brand');
+  sel.innerHTML = '<option value="">— Merk —</option>' +
+    S.brands.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+}
+
+async function onBrandChange() {
+  const brandId = document.getElementById('v-brand').value;
+  document.getElementById('v-model').innerHTML = '<option value="">— Model —</option>';
+  document.getElementById('v-variant').innerHTML = '<option value="">— Variant —</option>';
+
+  if (!brandId) return;
+
+  const { data } = await sb.from('models')
+    .select('*')
+    .eq('brand_id', brandId)
+    .order('name');
+
+  S.models = data || [];
+
+  const sel = document.getElementById('v-model');
+  sel.innerHTML = '<option value="">— Model —</option>' +
+    S.models.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+}
+
+async function onModelChange() {
+  const modelId = document.getElementById('v-model').value;
+  document.getElementById('v-variant').innerHTML = '<option value="">— Variant —</option>';
+
+  if (!modelId) return;
+
+  const { data } = await sb.from('variants')
+    .select('*')
+    .eq('model_id', modelId)
+    .order('name');
+
+  S.variants = data || [];
+
+  const sel = document.getElementById('v-variant');
+  sel.innerHTML = '<option value="">— Variant —</option>' +
+    S.variants.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+}
+
+async function loadJobsForDay() {
+  if (!S.workDay) return;
+
+  const { data } = await sb.from('jobs')
+    .select(`
+      *,
+      brands(name),
+      models(name),
+      variants(name, default_charging_duration_min, default_update_duration_min),
+      job_tasks(*)
+    `)
+    .eq('work_day_id', S.workDay.id)
+    .order('created_at');
+
+  S.jobs = data || [];
+  renderVehicleList();
+  updateRightPanel();
+}
+
+// ================================================
+// CHECK FOR EXISTING WORK DAY
+// ================================================
+async function checkExistingWorkDay() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data } = await sb.from('work_days')
+    .select('*, customers(*)')
+    .eq('user_id', S.user.id)
+    .eq('date', today)
+    .eq('status', 'open')
+    .single();
+
+  if (data) {
+    S.workDay = data;
+    S.customer = data.customers;
+    activateDayUI();
+    await loadJobsForDay();
+
+    // Check for open sessions from this day
+    await checkOpenSessions();
+  }
+}
+
+async function checkOpenSessions() {
+  // Find any sessions that were started but never closed
+  const { data } = await sb.from('work_sessions')
+    .select('*, jobs(work_day_id)')
+    .is('ended_at', null)
+    .eq('user_id', S.user.id);
+
+  if (data && data.length > 0) {
+    // Show alert for unclosed sessions
+    data.forEach(session => {
+      const started = new Date(session.started_at);
+      addNotification(
+        `Open sessie gevonden`,
+        `Sessie gestart om ${started.toLocaleTimeString('nl-BE', {hour:'2-digit',minute:'2-digit'})} werd nooit gesloten.`,
+        'warn'
+      );
+    });
+  }
+}
+
+// ================================================
+// START DAY
+// ================================================
+async function startDay() {
+  const customerId = document.getElementById('sd-customer').value;
+  if (!customerId) { toast('Selecteer eerst een klant'); return; }
+
+  const startTime = document.getElementById('sd-start').value;
+  const endTime   = document.getElementById('sd-end').value;
+  const today     = new Date().toISOString().slice(0, 10);
+  const now       = new Date();
+
+  // Build planned timestamps
+  const plannedStart = new Date(`${today}T${startTime}:00`);
+  const plannedEnd   = new Date(`${today}T${endTime}:00`);
+
+  const { data, error } = await sb.from('work_days').insert({
+    user_id:       S.user.id,
+    customer_id:   customerId,
+    date:          today,
+    planned_start: plannedStart.toISOString(),
+    planned_end:   plannedEnd.toISOString(),
+    actual_start:  now.toISOString(),
+    status:        'open',
+  }).select('*, customers(*)').single();
+
+  if (error) { toast('Fout bij starten werkdag: ' + error.message); return; }
+
+  S.workDay  = data;
+  S.customer = data.customers;
+
+  activateDayUI();
+  addTimeline('Werkdag gestart', S.customer.name);
+  toast('Werkdag gestart · ' + S.customer.name);
+}
+
+function activateDayUI() {
+  // Hide start screen, show job detail
+  document.getElementById('start-day-screen').style.display = 'none';
+  document.getElementById('job-detail').style.display = 'block';
+  document.getElementById('add-vehicle-btn').style.display = 'block';
+  document.getElementById('break-btn').style.display = 'block';
+
+  // Update topbar
+  document.getElementById('day-status').textContent =
+    (S.customer?.name || '—') + ' · ' +
+    new Date().toLocaleDateString('nl-BE', {weekday:'short', day:'numeric', month:'short'});
+  document.getElementById('day-status').style.color = 'var(--t2)';
+  document.getElementById('day-timer').style.display = 'block';
+
+  // Update left column title
+  document.getElementById('left-title').textContent = S.customer?.name || 'Voertuigen';
+
+  // Start day timer
+  startDayTimer();
+
+  // Mobile: show vehicles panel
+  showMobPanel('vehicles');
+}
+
+function startDayTimer() {
+  if (S.dayTimerInt) clearInterval(S.dayTimerInt);
+  S.dayTimerInt = setInterval(() => {
+    if (!S.workDay?.actual_start || S.onBreak) return;
+    const elapsed = Date.now() - new Date(S.workDay.actual_start).getTime() - S.totalBreak;
+    document.getElementById('day-timer').textContent = '⏱ ' + fmtTime(elapsed);
+  }, 1000);
+}
+
+// ================================================
+// BREAK
+// ================================================
+function toggleBreak() {
+  if (S.onBreak) endBreak();
+  else startBreak();
+}
+
+function startBreak() {
+  S.onBreak   = true;
+  S.breakStart = Date.now();
+  // Pause all active vehicles
+  S.jobs.filter(j => j.status === 'active').forEach(j => pauseJob(j.id, true));
+  document.getElementById('break-btn').textContent = '▶ Hervat';
+  document.getElementById('break-btn').style.borderColor = 'var(--warn)';
+  document.getElementById('break-btn').style.color = 'var(--warn)';
+  addTimeline('Pauze gestart');
+  toast('Pauze gestart');
+}
+
+function endBreak() {
+  if (S.breakStart) S.totalBreak += Date.now() - S.breakStart;
+  S.onBreak   = false;
+  S.breakStart = null;
+  document.getElementById('break-btn').textContent = '☕ Pauze';
+  document.getElementById('break-btn').style.borderColor = '';
+  document.getElementById('break-btn').style.color = '';
+  addTimeline('Pauze beëindigd');
+  toast('Pauze beëindigd · Terug aan het werk!');
+}
+
+// ================================================
+// ADD / EDIT VEHICLE
+// ================================================
+function openAddVehicle() {
+  if (!S.workDay) { toast('Start eerst een werkdag'); return; }
+  S.editJobId = null;
+  document.getElementById('mv-title').textContent = '🚗 Voertuig Toevoegen';
+  document.getElementById('mv-btn').textContent   = '▶ Starten';
+  document.getElementById('mv-btn').className     = 'btn bg';
+  // Clear fields
+  ['v-wo','v-vin','v-plate','v-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('v-brand').value   = '';
+  document.getElementById('v-model').innerHTML   = '<option value="">— Model —</option>';
+  document.getElementById('v-variant').innerHTML = '<option value="">— Variant —</option>';
+  openModal('m-vehicle');
+}
+
+async function saveVehicle() {
+  const wo      = document.getElementById('v-wo').value.trim();
+  const vin     = document.getElementById('v-vin').value.trim().toUpperCase();
+  const plate   = document.getElementById('v-plate').value.trim().toUpperCase();
+  const notes   = document.getElementById('v-notes').value.trim();
+  const brandId   = document.getElementById('v-brand').value || null;
+  const modelId   = document.getElementById('v-model').value || null;
+  const variantId = document.getElementById('v-variant').value || null;
+
+  if (!wo && !vin && !plate) {
+    toast('Vul minstens een werkorder, VIN of kenteken in');
+    return;
+  }
+
+  // Pause any currently active job
+  const activeJob = S.jobs.find(j => j.status === 'active');
+  if (activeJob) await pauseJob(activeJob.id, true);
+
+  // Create job in database
+  const { data: job, error } = await sb.from('jobs').insert({
+    work_day_id: S.workDay.id,
+    customer_id: S.workDay.customer_id,
+    user_id:     S.user.id,
+    brand_id:    brandId,
+    model_id:    modelId,
+    variant_id:  variantId,
+    work_order:  wo || null,
+    vin:         vin || null,
+    license_plate: plate || null,
+    notes:       notes || null,
+    status:      'active',
+  }).select(`
+    *,
+    brands(name),
+    models(name),
+    variants(name, default_charging_duration_min, default_update_duration_min),
+    job_tasks(*)
+  `).single();
+
+  if (error) { toast('Fout: ' + error.message); return; }
+
+  // Load tasks from template if variant selected
+  if (variantId) await loadTasksFromTemplate(job.id, variantId);
+
+  // Start work session
+  await startSession(job.id);
+
+  S.jobs.push(job);
+  closeModal('m-vehicle');
+  selectJob(job.id);
+  await loadJobsForDay();
+
+  const name = [job.brands?.name, job.models?.name].filter(Boolean).join(' ') || wo || vin || 'Nieuw voertuig';
+  addTimeline('Gestart: ' + name);
+  toast('Gestart: ' + name);
+}
+
+async function loadTasksFromTemplate(jobId, variantId) {
+  // Find template for this variant and customer
+  const { data: templates } = await sb.from('job_templates')
+    .select('id')
+    .eq('variant_id', variantId)
+    .or(`customer_id.eq.${S.workDay.customer_id},customer_id.is.null`)
+    .order('customer_id', { nullsLast: false })
+    .limit(1);
+
+  if (!templates?.length) return;
+
+  const { data: tasks } = await sb.from('job_template_tasks')
+    .select('*')
+    .eq('template_id', templates[0].id)
+    .order('order_index');
+
+  if (!tasks?.length) return;
+
+  // Insert tasks for this job
+  const jobTasks = tasks.map(t => ({
+    job_id:           jobId,
+    template_task_id: t.id,
+    category:         t.category,
+    label:            t.label,
+    task_type:        t.task_type,
+    order_index:      t.order_index,
+    data_field_config: t.data_field_config,
+    is_custom:        false,
+  }));
+
+  await sb.from('job_tasks').insert(jobTasks);
+}
+
+// ================================================
+// SESSION MANAGEMENT
+// ================================================
+async function startSession(jobId) {
+  const { data: session } = await sb.from('work_sessions').insert({
+    job_id:       jobId,
+    user_id:      S.user.id,
+    started_at:   new Date().toISOString(),
+    session_type: 'work',
+  }).select().single();
+
+  if (session) {
+    S.sessions[jobId] = session;
+    startJobTimer(jobId);
+  }
+}
+
+async function endSession(jobId) {
+  const session = S.sessions[jobId];
+  if (!session) return;
+
+  await sb.from('work_sessions').update({
+    ended_at: new Date().toISOString(),
+  }).eq('id', session.id);
+
+  delete S.sessions[jobId];
+  stopJobTimer(jobId);
+}
+
+// ================================================
+// JOB ACTIONS
+// ================================================
+async function pauseJob(jobId, silent = false) {
+  await endSession(jobId);
+  await sb.from('jobs').update({ status: 'paused' }).eq('id', jobId);
+
+  const job = S.jobs.find(j => j.id === jobId);
+  if (job) job.status = 'paused';
+  renderVehicleList();
+  if (S.selectedJob === jobId) renderJobDetail(jobId);
+
+  if (!silent) {
+    const name = getJobName(jobId);
+    addTimeline('Gepauzeerd: ' + name);
+    toast('Gepauzeerd: ' + name);
+  }
+}
+
+async function resumeJob(jobId) {
+  // Pause any currently active job first
+  const activeJob = S.jobs.find(j => j.status === 'active');
+  if (activeJob && activeJob.id !== jobId) await pauseJob(activeJob.id, true);
+
+  await sb.from('jobs').update({ status: 'active' }).eq('id', jobId);
+  await startSession(jobId);
+
+  const job = S.jobs.find(j => j.id === jobId);
+  if (job) job.status = 'active';
+  renderVehicleList();
+  renderJobDetail(jobId);
+
+  const name = getJobName(jobId);
+  addTimeline('Hervat: ' + name);
+  toast('Hervat: ' + name);
+}
+
+async function completeJob(jobId) {
+  confirm('Voertuig afronden', 'Markeer dit voertuig als klaar?', async () => {
+    await endSession(jobId);
+    await sb.from('jobs').update({ status: 'done' }).eq('id', jobId);
+
+    const job = S.jobs.find(j => j.id === jobId);
+    if (job) job.status = 'done';
+    renderVehicleList();
+    renderJobDetail(jobId);
+    updateRightPanel();
+
+    const name = getJobName(jobId);
+    addTimeline('Klaar: ' + name);
+    toast('✓ Klaar: ' + name);
+
+    // Notify customer contact
+    notifyCustomer(jobId, name);
+  });
+}
+
+async function startCharging(jobId) {
+  const variant = S.jobs.find(j => j.id === jobId)?.variants;
+  document.getElementById('wt-title').textContent = '🔌 Opladen Instellen';
+  document.getElementById('wt-desc').textContent  = 'Hoe lang staat het voertuig aan de lader?';
+  document.getElementById('wt-duration').value    = variant?.default_charging_duration_min || 30;
+  document.getElementById('wt-btn').onclick = () => startWaitingTimer('charging', jobId);
+  S.wtType = 'charging';
+  S.wtJobId = jobId;
+  openModal('m-waiting');
+}
+
+async function startUpdating(jobId) {
+  const variant = S.jobs.find(j => j.id === jobId)?.variants;
+  document.getElementById('wt-title').textContent = '💻 Software Update Instellen';
+  document.getElementById('wt-desc').textContent  = 'Hoe lang duurt de software update?';
+  document.getElementById('wt-duration').value    = variant?.default_update_duration_min || 60;
+  document.getElementById('wt-btn').onclick = () => startWaitingTimer('updating', jobId);
+  S.wtType = 'updating';
+  S.wtJobId = jobId;
+  openModal('m-waiting');
+}
+
+async function startWaitingTimer(type, jobId) {
+  jobId = jobId || S.wtJobId;
+  type  = type  || S.wtType;
+  const duration = parseInt(document.getElementById('wt-duration').value) || 30;
+
+  // Pause work session
+  await endSession(jobId);
+
+  // Update job status
+  await sb.from('jobs').update({ status: type }).eq('id', jobId);
+
+  // Create waiting timer record
+  const { data: timer } = await sb.from('waiting_timers').insert({
+    job_id:                jobId,
+    timer_type:            type,
+    started_at:            new Date().toISOString(),
+    expected_duration_min: duration,
+  }).select().single();
+
+  // Start countdown
+  const job = S.jobs.find(j => j.id === jobId);
+  if (job) job.status = type;
+
+  const startMs = Date.now();
+  const endMs   = startMs + duration * 60000;
+
+  S.waitTimers[jobId] = {
+    type, startMs, endMs, duration, timerId: timer?.id,
+    interval: setInterval(() => {
+      const remaining = endMs - Date.now();
+      if (remaining <= 0) {
+        clearInterval(S.waitTimers[jobId].interval);
+        showTimerNotification(jobId, type);
+      }
+      if (S.selectedJob === jobId) renderJobDetail(jobId);
+    }, 1000),
+  };
+
+  closeModal('m-waiting');
+  renderVehicleList();
+  renderJobDetail(jobId);
+
+  const name = getJobName(jobId);
+  const label = type === 'charging' ? 'Aan de lader' : 'Software update';
+  addTimeline(`${label}: ${name} (${duration} min)`);
+  toast(`${label} gestart · ${duration} min`);
+}
+
+function showTimerNotification(jobId, type) {
+  const name  = getJobName(jobId);
+  const label = type === 'charging' ? 'Opladen klaar' : 'Software update klaar';
+  document.getElementById('tn-title').textContent = `⏰ ${label}`;
+  document.getElementById('tn-msg').textContent   = name;
+  document.getElementById('timer-notif').classList.add('show');
+  addNotification(label, name, 'purple');
+  // Auto-dismiss after 10 seconds
+  setTimeout(dismissTimerNotif, 10000);
+}
+
+function dismissTimerNotif() {
+  document.getElementById('timer-notif').classList.remove('show');
+}
+
+// ================================================
+// TASK MANAGEMENT
+// ================================================
+async function toggleTask(taskId, jobId) {
+  const job  = S.jobs.find(j => j.id === jobId);
+  if (!job || job.status === 'done') return;
+  const task = job.job_tasks?.find(t => t.id === taskId);
+  if (!task) return;
+
+  const newVal = !task.is_checked;
+  task.is_checked = newVal;
+
+  await sb.from('job_tasks').update({
+    is_checked:    newVal,
+    completed_at:  newVal ? new Date().toISOString() : null,
+    completed_by:  newVal ? S.user.id : null,
+  }).eq('id', taskId);
+
+  renderJobDetail(jobId);
+  updateRightPanel();
+}
+
+function openAddTask() {
+  if (!S.selectedJob) return;
+  document.getElementById('t-label').value = '';
+  openModal('m-task');
+}
+
+async function saveTask() {
+  const label = document.getElementById('t-label').value.trim();
+  const cat   = document.getElementById('t-cat').value;
+  if (!label) { toast('Vul een omschrijving in'); return; }
+
+  const { data: task } = await sb.from('job_tasks').insert({
+    job_id:    S.selectedJob,
+    category:  cat,
+    label:     label,
+    task_type: 'checkbox',
+    is_custom: true,
+    order_index: 999,
+  }).select().single();
+
+  // Add to local state
+  const job = S.jobs.find(j => j.id === S.selectedJob);
+  if (job && task) {
+    if (!job.job_tasks) job.job_tasks = [];
+    job.job_tasks.push(task);
+  }
+
+  closeModal('m-task');
+  renderJobDetail(S.selectedJob);
+  toast('Taak toegevoegd');
+}
+
+// ================================================
+// JOB SELECTION & RENDERING
+// ================================================
+function selectJob(jobId) {
+  S.selectedJob = jobId;
+  renderVehicleList();
+  renderJobDetail(jobId);
+  // On mobile, switch to tasks panel
+  if (window.innerWidth <= 768) showMobPanel('tasks');
+}
+
+function renderVehicleList() {
+  const list = document.getElementById('vehicle-list');
+
+  if (!S.workDay) {
+    list.innerHTML = '<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12px;">Start eerst een werkdag</div>';
+    return;
+  }
+
+  if (!S.jobs.length) {
+    list.innerHTML = '<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12px;">Nog geen voertuigen<br><br><button class="btn bp bsm" onclick="openAddVehicle()">+ Toevoegen</button></div>';
+    // Also update mobile
+    document.getElementById('mob-vehicles').innerHTML = list.innerHTML;
+    return;
+  }
+
+  const html = S.jobs.map(job => {
+    const name     = getJobName(job.id);
+    const elapsed  = getJobElapsed(job.id);
+    const pct      = getJobProgress(job.id);
+    const sel      = job.id === S.selectedJob;
+    const tcls     = job.status === 'active' ? '' : job.status === 'done' ? 'done' : 'paused';
+    const scls     = `s-${job.status}`;
+    const slabel   = statusLabel(job.status);
+
+    return `<div class="vc ${job.status}-v ${sel ? 'selected' : ''}" onclick="selectJob('${job.id}')">
+      <div class="vc-top">
+        <div>
+          <div class="vc-name">${name}</div>
+          ${job.work_order ? `<div class="vc-wo">WO: ${job.work_order}</div>` : ''}
+        </div>
+        <div style="text-align:right;">
+          <div class="vc-time ${tcls}" id="vt-${job.id}">${fmtTime(elapsed)}</div>
+          <span class="sbadge ${scls}" style="margin-top:3px;">${slabel}</span>
+        </div>
+      </div>
+      <div class="pbar"><div class="pfill ${pct===100?'done':''}" style="width:${pct}%"></div></div>
+      <div style="font-size:10px;color:var(--t3);margin-top:3px;font-family:var(--fm);">${getJobProgress(job.id)}% · ${job.job_tasks?.filter(t=>t.is_checked).length||0}/${job.job_tasks?.length||0} taken</div>
+    </div>`;
+  }).join('');
+
+  list.innerHTML = html;
+  document.getElementById('mob-vehicles').innerHTML =
+    `<div style="padding-bottom:60px;">${html}<div style="margin-top:10px;"><button class="btn bp bfull" onclick="openAddVehicle()">+ Voertuig Toevoegen</button></div></div>`;
+}
+
+function renderJobDetail(jobId) {
+  const job = S.jobs.find(j => j.id === jobId);
+  const content = document.getElementById('job-content');
+  const empty   = document.getElementById('job-empty');
+
+  if (!job) {
+    content.style.display = 'none';
+    empty.style.display   = 'flex';
+    document.getElementById('mob-tasks').innerHTML = '';
+    return;
+  }
+
+  empty.style.display   = 'none';
+  content.style.display = 'block';
+
+  const name    = getJobName(jobId);
+  const elapsed = getJobElapsed(jobId);
+  const isDone  = job.status === 'done';
+
+  // Group tasks by category
+  const cats = {};
+  (job.job_tasks || []).forEach(t => {
+    if (!cats[t.category]) cats[t.category] = [];
+    cats[t.category].push(t);
+  });
+
+  // Build waiting timer display if applicable
+  let waitHtml = '';
+  if (S.waitTimers[jobId]) {
+    const wt = S.waitTimers[jobId];
+    const remaining = Math.max(0, wt.endMs - Date.now());
+    const elapsed_wt = Date.now() - wt.startMs;
+    const label = wt.type === 'charging' ? '🔌 Opladen' : '💻 Software Update';
+    waitHtml = `<div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--purple);">${label}</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:2px;">
+            ${remaining > 0
+              ? `Nog ${fmtTime(remaining)} · klaar om ${new Date(wt.endMs).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})}`
+              : '<span style="color:var(--red);">Tijd voorbij!</span>'}
+          </div>
+        </div>
+        <div style="font-family:var(--fm);font-size:20px;color:var(--purple);">${fmtTime(elapsed_wt)}</div>
+      </div>
+      ${remaining > 0
+        ? `<div style="height:3px;background:var(--bg3);border-radius:2px;margin-top:8px;overflow:hidden;">
+             <div style="height:100%;background:var(--purple);width:${Math.round((elapsed_wt/(wt.duration*60000))*100)}%;transition:width 1s;"></div>
+           </div>`
+        : ''}
+    </div>`;
+  }
+
+  // Build task HTML
+  const tasksHtml = Object.entries(cats).map(([cat, tasks]) => {
+    const done  = tasks.filter(t => t.is_checked).length;
+    const tHtml = tasks.map(t => {
+      let extraHtml = '';
+      // Data field task
+      if (t.task_type === 'data_field' && t.is_checked) {
+        const config = t.data_field_config || {};
+        const fields = config.fields || [];
+        if (fields.length) {
+          extraHtml = `<div class="data-field-box">${fields.map(f =>
+            `<div class="df-row">
+              <div class="df-key">${f.label}</div>
+              <input class="df-input" value="${t.data_value?.[f.key]||''}"
+                onchange="saveDataField('${t.id}','${f.key}',this.value)"
+                placeholder="${f.label}">
+            </div>`
+          ).join('')}</div>`;
+        }
+      }
+      // Waiting task
+      if (t.task_type === 'waiting') {
+        const isCharging = t.label.toLowerCase().includes('lad');
+        const isUpdating = t.label.toLowerCase().includes('update') || t.label.toLowerCase().includes('software');
+        extraHtml = !isDone ? `<div style="display:flex;gap:5px;margin:4px 0 6px 30px;">
+          <button class="btn bgh bsm" onclick="startCharging('${jobId}');event.stopPropagation()">🔌 Opladen starten</button>
+          <button class="btn bgh bsm" onclick="startUpdating('${jobId}');event.stopPropagation()">💻 Update starten</button>
+        </div>` : '';
+      }
+      return `<div class="task-item ${t.is_checked?'checked':''}" onclick="toggleTask('${t.id}','${jobId}')">
+        <div class="task-check">${t.is_checked?`<svg width="10" height="8" viewBox="0 0 12 10" fill="none"><polyline points="1 5 4.5 8.5 11 1" stroke="white" stroke-width="2"/></svg>`:''}</div>
+        <div style="flex:1;">
+          <div class="task-label">${t.label}</div>
+          ${t.is_custom ? '<div class="task-custom">aangepast</div>' : ''}
+        </div>
+      </div>${extraHtml}`;
+    }).join('');
+
+    return `<div class="task-section">
+      <div class="task-cat"><span>${cat}</span><span class="task-cat-count">${done}/${tasks.length}</span></div>
+      ${tHtml}
+    </div>`;
+  }).join('');
+
+  // Build action buttons
+  let actionHtml = '';
+  if (!isDone) {
+    if (job.status === 'active') {
+      actionHtml = `
+        <button class="btn bw bsm" onclick="pauseJob('${jobId}')">⏸ Pauzeren</button>
+        <button class="btn bg bsm" onclick="completeJob('${jobId}')">✓ Klaar</button>
+        <button class="btn bgh bsm" onclick="openAddTask()">+ Taak</button>
+        <button class="btn bgh bsm" onclick="openAdjustTime('${jobId}')">⏱ Tijd</button>`;
+    } else if (job.status === 'paused') {
+      actionHtml = `
+        <button class="btn bg bsm" onclick="resumeJob('${jobId}')">▶ Hervatten</button>
+        <button class="btn bg bsm" onclick="completeJob('${jobId}')">✓ Klaar</button>
+        <button class="btn bgh bsm" onclick="openAddTask()">+ Taak</button>
+        <button class="btn bgh bsm" onclick="openAdjustTime('${jobId}')">⏱ Tijd</button>`;
+    } else if (job.status === 'charging' || job.status === 'updating') {
+      actionHtml = `
+        <button class="btn bp bsm" onclick="resumeJob('${jobId}')">▶ Terug aan het werk</button>
+        <button class="btn bgh bsm" onclick="openAddTask()">+ Taak</button>`;
+    }
+  }
+
+  const html = `
+    <div class="job-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="job-title">${name}</div>
+          <div class="job-meta">
+            ${job.work_order ? `WO: ${job.work_order} · ` : ''}
+            ${job.vin ? `VIN: ${job.vin} · ` : ''}
+            ${job.license_plate ? `${job.license_plate}` : ''}
+          </div>
+        </div>
+        <span class="sbadge s-${job.status}">${statusLabel(job.status)}</span>
+      </div>
+      <div class="job-timer ${job.status !== 'active' ? 'paused' : ''}" id="jt-${jobId}">${fmtTime(elapsed)}</div>
+      <div class="job-actions">${actionHtml}</div>
+    </div>
+    ${waitHtml}
+    <div id="tasks-container-${jobId}">${tasksHtml || '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Geen taken · voeg er toe via "+ Taak"</div>'}</div>`;
+
+  content.innerHTML = html;
+  document.getElementById('mob-tasks').innerHTML = `<div style="padding-bottom:60px;">${html}</div>`;
+}
+
+async function saveDataField(taskId, fieldKey, value) {
+  const job  = S.jobs.find(j => j.job_tasks?.some(t => t.id === taskId));
+  const task = job?.job_tasks?.find(t => t.id === taskId);
+  if (!task) return;
+
+  if (!task.data_value) task.data_value = {};
+  task.data_value[fieldKey] = value;
+
+  await sb.from('job_tasks').update({ data_value: task.data_value }).eq('id', taskId);
+}
+
+// ================================================
+// ADD CUSTOMER
+// ================================================
+function openAddCustomer() { openModal('m-customer'); }
+
+async function saveCustomer() {
+  const name    = document.getElementById('c-name').value.trim();
+  const address = document.getElementById('c-address').value.trim();
+  const vat     = document.getElementById('c-vat').value.trim();
+
+  if (!name) { toast('Vul een naam in'); return; }
+
+  const { data, error } = await sb.from('customers').insert({
+    organization_id: S.orgId,
+    name, address, vat_number: vat,
+  }).select().single();
+
+  if (error) { toast('Fout: ' + error.message); return; }
+
+  S.customers.push(data);
+  closeModal('m-customer');
+
+  // Refresh customer select
+  const sel = document.getElementById('sd-customer');
+  sel.innerHTML = '<option value="">— Selecteer klant —</option>' +
+    S.customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  sel.value = data.id;
+
+  toast('Klant toegevoegd: ' + name);
+}
+
+// ================================================
+// ADJUST TIME
+// ================================================
+function openAdjustTime(jobId) {
+  const now = new Date();
+  const iso = now.toISOString().slice(0,16);
+  document.getElementById('adj-start').value = iso;
+  document.getElementById('adj-end').value   = iso;
+  document.getElementById('adj-reason').value = '';
+  S.adjJobId = jobId;
+  openModal('m-adjust-time');
+}
+
+async function saveTimeAdjustment() {
+  const start  = document.getElementById('adj-start').value;
+  const end    = document.getElementById('adj-end').value;
+  const reason = document.getElementById('adj-reason').value.trim();
+
+  if (!start) { toast('Vul een starttijd in'); return; }
+
+  // Find active session for this job
+  const session = S.sessions[S.adjJobId];
+  if (session) {
+    await sb.from('work_sessions').update({
+      started_at:         new Date(start).toISOString(),
+      ended_at:           end ? new Date(end).toISOString() : null,
+      manually_adjusted:  true,
+      adjustment_reason:  reason || null,
+    }).eq('id', session.id);
+  }
+
+  closeModal('m-adjust-time');
+  addTimeline('Tijd aangepast' + (reason ? ': ' + reason : ''));
+  toast('Tijd aangepast');
+}
+
+// ================================================
+// TIMER HELPERS
+// ================================================
+function startJobTimer(jobId) {
+  if (S.timers[jobId]) stopJobTimer(jobId);
+  const session = S.sessions[jobId];
+  const base    = getStoredElapsed(jobId);
+
+  S.timers[jobId] = {
+    startMs: session ? new Date(session.started_at).getTime() : Date.now(),
+    base,
+    interval: setInterval(() => {
+      const elapsed = base + (Date.now() - S.timers[jobId].startMs);
+      // Update vehicle list timer
+      const el = document.getElementById('vt-' + jobId);
+      if (el) el.textContent = fmtTime(elapsed);
+      // Update job detail timer
+      const jt = document.getElementById('jt-' + jobId);
+      if (jt) jt.textContent = fmtTime(elapsed);
+      // Check for long-running timer (> 3 hours)
+      if (elapsed > 3 * 3600000 && !S.timers[jobId].warned) {
+        S.timers[jobId].warned = true;
+        addNotification('Timer loopt al lang', getJobName(jobId) + ' — al meer dan 3 uur actief', 'warn');
+      }
+    }, 1000),
+  };
+}
+
+function stopJobTimer(jobId) {
+  if (S.timers[jobId]?.interval) {
+    clearInterval(S.timers[jobId].interval);
+    delete S.timers[jobId];
+  }
+}
+
+function getJobElapsed(jobId) {
+  const timer = S.timers[jobId];
+  if (timer) return timer.base + (Date.now() - timer.startMs);
+  return getStoredElapsed(jobId);
+}
+
+function getStoredElapsed(jobId) {
+  // Sum up all completed sessions for this job
+  // For now return 0 — will be fetched from DB in full version
+  return 0;
+}
+
+function getJobProgress(jobId) {
+  const job = S.jobs.find(j => j.id === jobId);
+  if (!job?.job_tasks?.length) return 0;
+  return Math.round(job.job_tasks.filter(t => t.is_checked).length / job.job_tasks.length * 100);
+}
+
+function getJobName(jobId) {
+  const job = S.jobs.find(j => j.id === jobId);
+  if (!job) return '—';
+  const parts = [job.brands?.name, job.models?.name].filter(Boolean);
+  return parts.length ? parts.join(' ') : (job.work_order || job.vin || 'Voertuig');
+}
+
+function statusLabel(status) {
+  const m = { active:'actief', paused:'gepauzeerd', charging:'aan lader', updating:'update', done:'klaar', waiting:'wacht', handed_over:'overgedragen' };
+  return m[status] || status;
+}
+
+// ================================================
+// RIGHT PANEL
+// ================================================
+function updateRightPanel() {
+  const total    = S.jobs.length;
+  const done     = S.jobs.filter(j => j.status === 'done').length;
+  const allTasks = S.jobs.reduce((a,j) => a + (j.job_tasks?.length||0), 0);
+  const doneTasks= S.jobs.reduce((a,j) => a + (j.job_tasks?.filter(t=>t.is_checked).length||0), 0);
+
+  document.getElementById('right-stats').innerHTML = `
+    <div class="stat-box"><div class="stat-val">${total}</div><div class="stat-lbl">Voertuigen</div></div>
+    <div class="stat-box"><div class="stat-val g">${done}</div><div class="stat-lbl">Klaar</div></div>
+    <div class="stat-box"><div class="stat-val" id="rs-time">00:00</div><div class="stat-lbl">Werktijd</div></div>
+    <div class="stat-box"><div class="stat-val">${doneTasks}/${allTasks}</div><div class="stat-lbl">Taken</div></div>`;
+}
+
+// ================================================
+// NOTIFICATIONS & TIMELINE
+// ================================================
+function addNotification(title, sub, type = 'warn') {
+  const colors = { warn: 'var(--warn)', purple: 'var(--purple)', info: 'var(--accent)' };
+  const color  = colors[type] || colors.warn;
+  const html   = `<div class="notif-item" style="border-color:${color};">
+    <div class="notif-title" style="color:${color};">${title}</div>
+    <div class="notif-sub">${sub}</div>
+  </div>`;
+
+  const list = document.getElementById('notifications-list');
+  if (list.querySelector('.notif-item') === null) list.innerHTML = '';
+  list.insertAdjacentHTML('afterbegin', html);
+}
+
+function addTimeline(text, sub = '') {
+  const time = new Date().toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+  S.timeline.unshift({ time, text, sub });
+
+  const list = document.getElementById('timeline-list');
+  list.innerHTML = S.timeline.slice(0, 20).map(t =>
+    `<div class="timeline-item">
+      <div class="timeline-time">${t.time}</div>
+      <div class="timeline-text">${t.text}${t.sub ? ' · ' + t.sub : ''}</div>
+    </div>`
+  ).join('');
+}
+
+function notifyCustomer(jobId, name) {
+  // Placeholder for real email notification
+  // Will be implemented via Supabase Edge Functions
+  console.log('Notify customer: job completed for', name);
+}
+
+// ================================================
+// SCANNER
+// ================================================
+function openScanner(target) {
+  S.scanTarget = target;
+  const titles = { wo: '📷 Werkorder Scannen', vin: '📷 VIN Barcode Scannen' };
+  document.getElementById('scan-title').textContent = titles[target] || '📷 Scannen';
+  document.getElementById('scan-manual').value = '';
+  document.getElementById('scan-result').style.display = 'none';
+  openModal('m-scan');
+  startCamera();
+}
+
+async function startCamera() {
+  try {
+    S.scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const vid = document.getElementById('scan-vid');
+    vid.srcObject = S.scanStream;
+    await vid.play();
+
+    if ('BarcodeDetector' in window) {
+      const bd = new BarcodeDetector({ formats: ['code_128','code_39','ean_13','qr_code','data_matrix','pdf417'] });
+      const detect = async () => {
+        if (!S.scanStream) return;
+        try {
+          const codes = await bd.detect(vid);
+          if (codes.length > 0) { applyScan(codes[0].rawValue); return; }
+        } catch(e) {}
+        if (S.scanStream) requestAnimationFrame(detect);
+      };
+      requestAnimationFrame(detect);
+    }
+  } catch(e) {
+    toast('Camera niet beschikbaar · typ handmatig');
+  }
+}
+
+function applyScan(val) {
+  stopCamera();
+  document.getElementById('scan-result').textContent = val;
+  document.getElementById('scan-result').style.display = 'block';
+
+  if (S.scanTarget === 'wo') document.getElementById('v-wo').value = val;
+  else if (S.scanTarget === 'vin') document.getElementById('v-vin').value = val.toUpperCase();
+
+  setTimeout(closeScan, 600);
+  toast('Gescand ✓');
+}
+
+function manualScan() {
+  const val = document.getElementById('scan-manual').value.trim();
+  if (val) applyScan(val);
+}
+
+function stopCamera() {
+  if (S.scanStream) { S.scanStream.getTracks().forEach(t => t.stop()); S.scanStream = null; }
+}
+
+function closeScan() { stopCamera(); closeModal('m-scan'); }
+
+// ================================================
+// VIN OCR
+// ================================================
+function openVinOCR() {
+  document.getElementById('vin-ocr-preview').style.display  = 'none';
+  document.getElementById('vin-ocr-loading').style.display  = 'none';
+  openModal('m-vin-ocr');
+}
+
+function captureVinPhoto(source) {
+  const input = document.getElementById('vin-file-input');
+  input.setAttribute('capture', source === 'camera' ? 'environment' : '');
+  input.click();
+}
+
+async function processVinImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Show preview
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    document.getElementById('vin-preview-img').src = e.target.result;
+    document.getElementById('vin-ocr-preview').style.display = 'none';
+    document.getElementById('vin-ocr-loading').style.display = 'block';
+
+    try {
+      // Convert to base64
+      const base64 = e.target.result.split(',')[1];
+
+      // Call Anthropic API for OCR
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 200,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: { type: 'base64', media_type: file.type, data: base64 }
+              },
+              {
+                type: 'text',
+                text: 'Extract the VIN (Vehicle Identification Number) from this image. A VIN is exactly 17 characters, contains only letters and numbers (no I, O or Q). Reply with ONLY the VIN, nothing else. If you cannot find a VIN, reply with "NOT_FOUND".'
+              }
+            ]
+          }]
+        })
+      });
+
+      const data = await response.json();
+      const vin  = data.content?.[0]?.text?.trim().toUpperCase() || 'NOT_FOUND';
+
+      document.getElementById('vin-ocr-loading').style.display = 'none';
+      document.getElementById('vin-ocr-preview').style.display = 'block';
+      document.getElementById('vin-ocr-text').textContent = vin === 'NOT_FOUND' ? 'Geen VIN gevonden' : vin;
+      document.getElementById('vin-ocr-input').value = vin === 'NOT_FOUND' ? '' : vin;
+
+    } catch(err) {
+      document.getElementById('vin-ocr-loading').style.display = 'none';
+      document.getElementById('vin-ocr-preview').style.display = 'block';
+      document.getElementById('vin-ocr-text').textContent = 'Fout bij herkenning';
+      document.getElementById('vin-ocr-input').value = '';
+      toast('OCR fout · typ het VIN handmatig');
+    }
+  };
+
+  reader.readAsDataURL(file);
+}
+
+function applyVinOCR() {
+  const vin = document.getElementById('vin-ocr-input').value.trim().toUpperCase();
+  if (!vin || vin.length !== 17) {
+    toast('VIN moet exact 17 karakters zijn');
+    return;
+  }
+  document.getElementById('v-vin').value = vin;
+  closeModal('m-vin-ocr');
+  toast('VIN ingevuld: ' + vin);
+}
+
+// ================================================
+// REAL-TIME SUBSCRIPTION
+// ================================================
+function setupRealtimeSubscription() {
+  // Listen for job updates from other devices
+  sb.channel('jobs-channel')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'jobs',
+    }, (payload) => {
+      // Update local state when changes come from other devices
+      if (payload.eventType === 'UPDATE') {
+        const idx = S.jobs.findIndex(j => j.id === payload.new.id);
+        if (idx >= 0) {
+          Object.assign(S.jobs[idx], payload.new);
+          renderVehicleList();
+          if (S.selectedJob === payload.new.id) renderJobDetail(payload.new.id);
+        }
+      }
+    })
+    .subscribe();
+}
+
+// ================================================
+// MOBILE NAVIGATION
+// ================================================
+function showMobPanel(name) {
+  ['vehicles','tasks','overview'].forEach(p => {
+    document.getElementById('mob-' + p).classList.toggle('active', p === name);
+    document.getElementById('mnb-' + p)?.classList.toggle('active', p === name);
+  });
+
+  if (name === 'overview') renderMobOverview();
+}
+
+function renderMobOverview() {
+  const total     = S.jobs.length;
+  const done      = S.jobs.filter(j => j.status === 'done').length;
+  const allTasks  = S.jobs.reduce((a,j) => a + (j.job_tasks?.length||0), 0);
+  const doneTasks = S.jobs.reduce((a,j) => a + (j.job_tasks?.filter(t=>t.is_checked).length||0), 0);
+
+  document.getElementById('mob-overview').innerHTML = `
+    <div style="padding-bottom:60px;">
+      <div class="stat-grid" style="margin-bottom:16px;">
+        <div class="stat-box"><div class="stat-val">${total}</div><div class="stat-lbl">Voertuigen</div></div>
+        <div class="stat-box"><div class="stat-val g">${done}</div><div class="stat-lbl">Klaar</div></div>
+        <div class="stat-box"><div class="stat-val">${doneTasks}/${allTasks}</div><div class="stat-lbl">Taken</div></div>
+        <div class="stat-box"><div class="stat-val" style="font-size:14px;">${S.customer?.name||'—'}</div><div class="stat-lbl">Klant</div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:8px;">Tijdlijn</div>
+      ${S.timeline.slice(0,15).map(t =>
+        `<div class="timeline-item"><div class="timeline-time">${t.time}</div><div class="timeline-text">${t.text}</div></div>`
+      ).join('') || '<div style="font-size:11px;color:var(--t3);">Nog geen activiteit</div>'}
+    </div>`;
+}
+
+// ================================================
+// MODAL HELPERS
+// ================================================
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.mo').forEach(mo => {
+  mo.addEventListener('click', function(e) {
+    if (e.target === this) {
+      if (this.id === 'm-scan') closeScan();
+      else closeModal(this.id);
+    }
+  });
+});
+
+// ================================================
+// CONFIRM DIALOG
+// ================================================
+function confirm(title, msg, cb) {
+  document.getElementById('conf-title').textContent = title;
+  document.getElementById('conf-msg').textContent   = msg;
+  document.getElementById('conf-ok').onclick = () => { closeConfirm(); cb(); };
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+}
+
+// ================================================
+// TOAST
+// ================================================
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ================================================
+// LOGOUT
+// ================================================
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.href = 'workprep-login.html';
+}
+
+// ================================================
+// FORMAT TIME
+// ================================================
+function fmtTime(ms) {
+  const s = Math.floor(Math.abs(ms) / 1000);
+  return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+// ================================================
+// STARTUP CHECK — warn if opened without login
+// ================================================
+window.addEventListener('unhandledrejection', e => {
+  console.warn('Unhandled promise rejection:', e.reason);
+});
+
+// Start the app
+init();
+</script>
+</body>
+</html>
