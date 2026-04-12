@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f172a">
+<title>WorkPrep — Login</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ================================================
+   RESET & BASE
+================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0f172a;
+  --bg2:      #1e293b;
+  --bg3:      #273449;
+  --border:   #334155;
+  --accent:   #3b82f6;
+  --accent2:  #2563eb;
+  --green:    #22c55e;
+  --red:      #ef4444;
+  --text:     #f1f5f9;
+  --t2:       #94a3b8;
+  --t3:       #475569;
+  --fh:       'Syne', sans-serif;
+  --fm:       'JetBrains Mono', monospace;
+}
+
+html, body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--fh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================================================
+   BACKGROUND GRID
+================================================ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* ================================================
+   LOGIN CARD
+================================================ */
+.card {
+  width: 100%;
+  max-width: 400px;
+  margin: 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px;
+  position: relative;
+}
+
+/* Top accent line */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 40px; right: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  border-radius: 2px;
+}
+
+/* ================================================
+   LOGO
+================================================ */
+.logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.logo-icon {
+  width: 56px;
+  height: 56px;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.3);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.logo-icon svg {
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+}
+
+.logo-name {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--text);
+}
+
+.logo-name span { color: var(--accent); }
+
+.logo-sub {
+  font-size: 12px;
+  color: var(--t3);
+  font-family: var(--fm);
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+/* ================================================
+   FORM
+================================================ */
+.field {
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--t2);
+  margin-bottom: 6px;
+}
+
+.input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 14px;
+  color: var(--text);
+  font-family: var(--fh);
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+
+.input::placeholder { color: var(--t3); }
+
+/* ================================================
+   BUTTONS
+================================================ */
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--fh);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all .15s;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary:hover { background: var(--accent2); }
+.btn-primary:active { transform: scale(0.99); }
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ================================================
+   MESSAGES
+================================================ */
+.msg {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: none;
+}
+
+.msg.error {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #fca5a5;
+  display: block;
+}
+
+.msg.success {
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.3);
+  color: #86efac;
+  display: block;
+}
+
+/* ================================================
+   FORGOT PASSWORD LINK
+================================================ */
+.forgot {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.forgot a {
+  font-size: 12px;
+  color: var(--t3);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color .15s;
+}
+
+.forgot a:hover { color: var(--accent); }
+
+/* ================================================
+   SPINNER
+================================================ */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ================================================
+   VERSION
+================================================ */
+.version {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 11px;
+  color: var(--t3);
+  font-family: var(--fm);
+}
+
+/* ================================================
+   RESET PASSWORD VIEW (hidden by default)
+================================================ */
+#reset-view { display: none; }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- LOGO -->
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="7" width="20" height="14" rx="2"/>
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+        <line x1="12" y1="12" x2="12" y2="16"/>
+        <line x1="10" y1="14" x2="14" y2="14"/>
+      </svg>
+    </div>
+    <div class="logo-name">Work<span>Prep</span></div>
+    <div class="logo-sub">WORKSHOP MANAGEMENT</div>
+  </div>
+
+  <!-- LOGIN VIEW -->
+  <div id="login-view">
+    <div class="msg" id="login-msg"></div>
+
+    <div class="field">
+      <label class="label">Email</label>
+      <input
+        type="email"
+        class="input"
+        id="login-email"
+        placeholder="jouw@email.com"
+        autocomplete="email"
+      >
+    </div>
+
+    <div class="field">
+      <label class="label">Wachtwoord</label>
+      <input
+        type="password"
+        class="input"
+        id="login-password"
+        placeholder="••••••••"
+        autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()"
+      >
+    </div>
+
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">
+      Inloggen
+    </button>
+
+    <div class="forgot">
+      <a onclick="showReset()">Wachtwoord vergeten?</a>
+    </div>
+  </div>
+
+  <!-- RESET PASSWORD VIEW -->
+  <div id="reset-view">
+    <div class="msg" id="reset-msg"></div>
+
+    <p style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6;">
+      Vul je email in. Je ontvangt een link om je wachtwoord opnieuw in te stellen.
+    </p>
+
+    <div class="field">
+      <label class="label">Email</label>
+      <input
+        type="email"
+        class="input"
+        id="reset-email"
+        placeholder="jouw@email.com"
+      >
+    </div>
+
+    <button class="btn-primary" id="reset-btn" onclick="doReset()">
+      Reset link versturen
+    </button>
+
+    <div class="forgot">
+      <a onclick="showLogin()">← Terug naar login</a>
+    </div>
+  </div>
+
+  <div class="version">WorkPrep v1.0 · © 2025</div>
+</div>
+
+<script>
+// ================================================
+// SUPABASE CONFIG
+// ================================================
+const SUPABASE_URL = 'https://tiavzsywbiwajvxknqof.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_aunpvg532iEoEbvOJ08-DA_XOR1rQU4';
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ================================================
+// CHECK IF ALREADY LOGGED IN
+// ================================================
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    // Already logged in — redirect to app
+    window.location.href = 'workprep-app.html';
+  }
+}
+
+checkSession();
+
+// ================================================
+// LOGIN
+// ================================================
+async function doLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn      = document.getElementById('login-btn');
+  const msg      = document.getElementById('login-msg');
+
+  // Clear previous messages
+  msg.className = 'msg';
+  msg.textContent = '';
+
+  // Basic validation
+  if (!email || !password) {
+    showMsg(msg, 'error', 'Vul je email en wachtwoord in.');
+    return;
+  }
+
+  // Show loading state
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Inloggen...';
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = 'Inloggen';
+    // Translate common Supabase errors to Dutch
+    const errMap = {
+      'Invalid login credentials': 'Ongeldig email of wachtwoord.',
+      'Email not confirmed':        'Email nog niet bevestigd. Controleer je inbox.',
+      'Too many requests':          'Te veel pogingen. Wacht even en probeer opnieuw.',
+    };
+    showMsg(msg, 'error', errMap[error.message] || error.message);
+    return;
+  }
+
+  // Success — redirect to app
+  showMsg(msg, 'success', 'Ingelogd! Even laden...');
+  setTimeout(() => {
+    window.location.href = 'workprep-app.html';
+  }, 600);
+}
+
+// ================================================
+// RESET PASSWORD
+// ================================================
+async function doReset() {
+  const email = document.getElementById('reset-email').value.trim();
+  const btn   = document.getElementById('reset-btn');
+  const msg   = document.getElementById('reset-msg');
+
+  msg.className = 'msg';
+  msg.textContent = '';
+
+  if (!email) {
+    showMsg(msg, 'error', 'Vul je email in.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Versturen...';
+
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/workprep-app.html',
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Reset link versturen';
+
+  if (error) {
+    showMsg(msg, 'error', error.message);
+    return;
+  }
+
+  showMsg(msg, 'success', 'Reset link verstuurd! Controleer je inbox.');
+}
+
+// ================================================
+// UI HELPERS
+// ================================================
+function showMsg(el, type, text) {
+  el.className = 'msg ' + type;
+  el.textContent = text;
+}
+
+function showReset() {
+  document.getElementById('login-view').style.display  = 'none';
+  document.getElementById('reset-view').style.display  = 'block';
+  document.getElementById('reset-msg').className = 'msg';
+}
+
+function showLogin() {
+  document.getElementById('reset-view').style.display  = 'none';
+  document.getElementById('login-view').style.display  = 'block';
+  document.getElementById('login-msg').className = 'msg';
+}
+</script>
+</body>
+</html>
