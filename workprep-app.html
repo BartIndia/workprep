@@ -731,6 +731,7 @@ textarea.iif { min-height: 70px; resize: vertical; }
   </div>
   <div id="topbar-right">
     <button class="btn bgh bsm" id="break-btn" style="display:none;" onclick="toggleBreak()">☕ Pauze</button>
+    <button class="btn br bsm" id="endday-btn" style="display:none;" onclick="confirmEndDay()">■ Dag Stoppen</button>
     <div style="font-size:12px;color:var(--t2);font-family:var(--fm);" id="user-name"></div>
     <button class="btn bgh bsm" onclick="doLogout()">↩ Uitloggen</button>
   </div>
@@ -1078,7 +1079,88 @@ textarea.iif { min-height: 70px; resize: vertical; }
   </div>
 </div>
 
-<!-- CONFIRM DIALOG -->
+<!-- EDIT JOB MODAL (add details after start) -->
+<div class="mo" id="m-edit-job">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title">✏️ Werkorder Aanvullen</div>
+    <div class="two-col">
+      <div class="ig">
+        <label class="il">Merk</label>
+        <select class="iif" id="ej-brand" onchange="onEditBrandChange()">
+          <option value="">— Merk —</option>
+        </select>
+      </div>
+      <div class="ig">
+        <label class="il">Model</label>
+        <select class="iif" id="ej-model" onchange="onEditModelChange()">
+          <option value="">— Model —</option>
+        </select>
+      </div>
+    </div>
+    <div class="ig">
+      <label class="il">Variant</label>
+      <select class="iif" id="ej-variant">
+        <option value="">— Variant —</option>
+      </select>
+    </div>
+    <div class="ig">
+      <label class="il">Werkorder #</label>
+      <div style="display:flex;gap:7px;">
+        <input type="text" class="iif" id="ej-wo" placeholder="Werkordernummer" style="flex:1;">
+        <button class="btn bgh bsm" onclick="openScanner('wo-edit')" style="padding:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M14 17v3h3M17 14h3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="ig">
+      <label class="il">Chassisnummer (VIN)</label>
+      <div style="display:flex;gap:7px;">
+        <input type="text" class="iif" id="ej-vin" placeholder="17-karakter VIN" style="flex:1;text-transform:uppercase;" maxlength="17">
+        <button class="btn bgh bsm" onclick="openScanner('vin-edit')" style="padding:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="5" x2="3" y2="19"/><line x1="7" y1="5" x2="7" y2="19"/><line x1="11" y1="5" x2="11" y2="19"/><line x1="15" y1="5" x2="15" y2="19"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        </button>
+        <button class="btn bgh bsm" onclick="openVinOCR()" style="padding:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="ig">
+      <label class="il">Kenteken</label>
+      <input type="text" class="iif" id="ej-plate" placeholder="1-ABC-234" style="text-transform:uppercase;">
+    </div>
+    <div class="ig">
+      <label class="il">Notities</label>
+      <textarea class="iif" id="ej-notes" placeholder="Optionele notities..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-edit-job')">Annuleren</button>
+      <button class="btn bp" style="flex:2;" onclick="saveEditJob()">💾 Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- END DAY MODAL -->
+<div class="mo" id="m-endday">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title" style="color:var(--red);">■ Dag Afsluiten</div>
+    <div id="endday-summary" style="background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:14px;"></div>
+    <div class="ig">
+      <label class="il">Eindtijd</label>
+      <input type="datetime-local" class="iif" id="endday-time">
+    </div>
+    <div class="ig">
+      <label class="il">Notities (optioneel)</label>
+      <textarea class="iif" id="endday-notes" placeholder="Opmerkingen over de dag..."></textarea>
+    </div>
+    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;padding:10px;margin-bottom:14px;font-size:12px;color:var(--warn);" id="endday-warnings"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-endday')">Annuleren</button>
+      <button class="btn br" style="flex:2;" onclick="doEndDay()">■ Dag Afsluiten</button>
+    </div>
+  </div>
+</div>
 <div id="confirm-overlay">
   <div class="confirm-box">
     <div class="confirm-title" id="conf-title">Bevestigen</div>
@@ -1353,6 +1435,7 @@ function activateDayUI() {
   document.getElementById('job-detail').style.display = 'block';
   document.getElementById('add-vehicle-btn').style.display = 'block';
   document.getElementById('break-btn').style.display = 'block';
+  document.getElementById('endday-btn').style.display = 'block';
 
   // Update topbar
   document.getElementById('day-status').textContent =
@@ -1904,12 +1987,14 @@ function renderJobDetail(jobId) {
         <button class="btn bw bsm" onclick="pauseJob('${jobId}')">⏸ Pauzeren</button>
         <button class="btn bg bsm" onclick="completeJob('${jobId}')">✓ Klaar</button>
         <button class="btn bgh bsm" onclick="openAddTask()">+ Taak</button>
+        <button class="btn bgh bsm" onclick="openEditJob('${jobId}')">✏️ Aanvullen</button>
         <button class="btn bgh bsm" onclick="openAdjustTime('${jobId}')">⏱ Tijd</button>`;
     } else if (job.status === 'paused') {
       actionHtml = `
         <button class="btn bg bsm" onclick="resumeJob('${jobId}')">▶ Hervatten</button>
         <button class="btn bg bsm" onclick="completeJob('${jobId}')">✓ Klaar</button>
         <button class="btn bgh bsm" onclick="openAddTask()">+ Taak</button>
+        <button class="btn bgh bsm" onclick="openEditJob('${jobId}')">✏️ Aanvullen</button>
         <button class="btn bgh bsm" onclick="openAdjustTime('${jobId}')">⏱ Tijd</button>`;
     } else if (job.status === 'charging' || job.status === 'updating') {
       actionHtml = `
@@ -2179,6 +2264,8 @@ function applyScan(val) {
 
   if (S.scanTarget === 'wo') document.getElementById('v-wo').value = val;
   else if (S.scanTarget === 'vin') document.getElementById('v-vin').value = val.toUpperCase();
+  else if (S.scanTarget === 'wo-edit') document.getElementById('ej-wo').value = val;
+  else if (S.scanTarget === 'vin-edit') document.getElementById('ej-vin').value = val.toUpperCase();
 
   setTimeout(closeScan, 600);
   toast('Gescand ✓');
@@ -2376,8 +2463,202 @@ function toast(msg) {
 }
 
 // ================================================
-// LOGOUT
+// END DAY
 // ================================================
+function confirmEndDay() {
+  const now = new Date();
+  const iso = now.toISOString().slice(0,16);
+  document.getElementById('endday-time').value = iso;
+  document.getElementById('endday-notes').value = '';
+
+  // Build summary
+  const total   = S.jobs.length;
+  const done    = S.jobs.filter(j => j.status === 'done').length;
+  const active  = S.jobs.filter(j => j.status === 'active' || j.status === 'paused').length;
+  const allT    = S.jobs.reduce((a,j) => a + (j.job_tasks?.length||0), 0);
+  const doneT   = S.jobs.reduce((a,j) => a + (j.job_tasks?.filter(t=>t.is_checked).length||0), 0);
+
+  document.getElementById('endday-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div><div style="font-family:var(--fm);font-size:20px;color:var(--text);">${total}</div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;">Voertuigen</div></div>
+      <div><div style="font-family:var(--fm);font-size:20px;color:var(--green);">${done}</div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;">Klaar</div></div>
+      <div><div style="font-family:var(--fm);font-size:20px;color:var(--text);">${doneT}/${allT}</div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;">Taken</div></div>
+      <div><div style="font-family:var(--fm);font-size:14px;color:var(--text);">${S.customer?.name||'—'}</div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;">Klant</div></div>
+    </div>`;
+
+  // Warnings
+  let warnings = '';
+  if (active > 0) warnings += `⚠ ${active} voertuig(en) nog actief of gepauzeerd — worden automatisch afgesloten.<br>`;
+  const openTasks = S.jobs.reduce((a,j) => a + (j.job_tasks?.filter(t=>!t.is_checked).length||0), 0);
+  if (openTasks > 0) warnings += `⚠ ${openTasks} taak/taken nog niet afgevinkt.`;
+  document.getElementById('endday-warnings').innerHTML = warnings;
+  document.getElementById('endday-warnings').style.display = warnings ? 'block' : 'none';
+
+  openModal('m-endday');
+}
+
+async function doEndDay() {
+  const endTime = document.getElementById('endday-time').value;
+  const notes   = document.getElementById('endday-notes').value.trim();
+
+  // Close all active sessions
+  for (const job of S.jobs.filter(j => j.status === 'active')) {
+    await endSession(job.id);
+    await sb.from('jobs').update({ status: 'paused' }).eq('id', job.id);
+  }
+
+  // Close work day
+  await sb.from('work_days').update({
+    status:     'closed',
+    actual_end: endTime ? new Date(endTime).toISOString() : new Date().toISOString(),
+    notes:      notes || null,
+  }).eq('id', S.workDay.id);
+
+  // Stop day timer
+  if (S.dayTimerInt) clearInterval(S.dayTimerInt);
+
+  closeModal('m-endday');
+  addTimeline('Dag afgesloten');
+  toast('Dag afgesloten ✓');
+
+  // Reset UI after short delay
+  setTimeout(() => {
+    S.workDay = null;
+    S.customer = null;
+    S.jobs = [];
+    S.sessions = {};
+    S.timers = {};
+    S.waitTimers = {};
+    S.selectedJob = null;
+    S.onBreak = false;
+    S.totalBreak = 0;
+    S.timeline = [];
+
+    // Reset topbar
+    document.getElementById('day-status').textContent = 'Geen actieve dag';
+    document.getElementById('day-status').style.color = 'var(--t3)';
+    document.getElementById('day-timer').style.display = 'none';
+    document.getElementById('break-btn').style.display = 'none';
+    document.getElementById('endday-btn').style.display = 'none';
+    document.getElementById('add-vehicle-btn').style.display = 'none';
+
+    // Show start screen
+    document.getElementById('start-day-screen').style.display = 'flex';
+    document.getElementById('job-detail').style.display = 'none';
+    document.getElementById('vehicle-list').innerHTML = '<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12px;">Start eerst een werkdag</div>';
+
+    // Reset stats
+    updateRightPanel();
+  }, 1500);
+}
+
+// ================================================
+// EDIT JOB (add details after start)
+// ================================================
+async function openEditJob(jobId) {
+  const job = S.jobs.find(j => j.id === jobId);
+  if (!job) return;
+  S.editJobId = jobId;
+
+  // Populate brand dropdown
+  const brandSel = document.getElementById('ej-brand');
+  brandSel.innerHTML = '<option value="">— Merk —</option>' +
+    S.brands.map(b => `<option value="${b.id}" ${b.id === job.brand_id ? 'selected' : ''}>${b.name}</option>`).join('');
+
+  // Load models if brand set
+  if (job.brand_id) {
+    const { data: models } = await sb.from('models').select('*').eq('brand_id', job.brand_id).order('name');
+    document.getElementById('ej-model').innerHTML = '<option value="">— Model —</option>' +
+      (models||[]).map(m => `<option value="${m.id}" ${m.id === job.model_id ? 'selected' : ''}>${m.name}</option>`).join('');
+
+    if (job.model_id) {
+      const { data: variants } = await sb.from('variants').select('*').eq('model_id', job.model_id).order('name');
+      document.getElementById('ej-variant').innerHTML = '<option value="">— Variant —</option>' +
+        (variants||[]).map(v => `<option value="${v.id}" ${v.id === job.variant_id ? 'selected' : ''}>${v.name}</option>`).join('');
+    }
+  }
+
+  document.getElementById('ej-wo').value    = job.work_order || '';
+  document.getElementById('ej-vin').value   = job.vin || '';
+  document.getElementById('ej-plate').value = job.license_plate || '';
+  document.getElementById('ej-notes').value = job.notes || '';
+
+  openModal('m-edit-job');
+}
+
+async function onEditBrandChange() {
+  const brandId = document.getElementById('ej-brand').value;
+  document.getElementById('ej-model').innerHTML   = '<option value="">— Model —</option>';
+  document.getElementById('ej-variant').innerHTML = '<option value="">— Variant —</option>';
+  if (!brandId) return;
+  const { data } = await sb.from('models').select('*').eq('brand_id', brandId).order('name');
+  document.getElementById('ej-model').innerHTML = '<option value="">— Model —</option>' +
+    (data||[]).map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+}
+
+async function onEditModelChange() {
+  const modelId = document.getElementById('ej-model').value;
+  document.getElementById('ej-variant').innerHTML = '<option value="">— Variant —</option>';
+  if (!modelId) return;
+  const { data } = await sb.from('variants').select('*').eq('model_id', modelId).order('name');
+  document.getElementById('ej-variant').innerHTML = '<option value="">— Variant —</option>' +
+    (data||[]).map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+}
+
+async function saveEditJob() {
+  const job = S.jobs.find(j => j.id === S.editJobId);
+  if (!job) return;
+
+  const brandId   = document.getElementById('ej-brand').value || null;
+  const modelId   = document.getElementById('ej-model').value || null;
+  const variantId = document.getElementById('ej-variant').value || null;
+  const wo        = document.getElementById('ej-wo').value.trim();
+  const vin       = document.getElementById('ej-vin').value.trim().toUpperCase();
+  const plate     = document.getElementById('ej-plate').value.trim().toUpperCase();
+  const notes     = document.getElementById('ej-notes').value.trim();
+
+  // Check if variant changed — reload tasks if no tasks checked yet
+  const variantChanged = variantId && variantId !== job.variant_id;
+  const noTasksChecked = !job.job_tasks?.some(t => t.is_checked);
+
+  await sb.from('jobs').update({
+    brand_id:      brandId,
+    model_id:      modelId,
+    variant_id:    variantId,
+    work_order:    wo || null,
+    vin:           vin || null,
+    license_plate: plate || null,
+    notes:         notes || null,
+  }).eq('id', S.editJobId);
+
+  // Update local state
+  Object.assign(job, { brand_id: brandId, model_id: modelId, variant_id: variantId,
+    work_order: wo, vin, license_plate: plate, notes });
+
+  // Reload brand/model names
+  if (brandId) {
+    const br = S.brands.find(b => b.id === brandId);
+    if (br) job.brands = { name: br.name };
+  }
+
+  // If variant changed and no tasks checked, reload template tasks
+  if (variantChanged && noTasksChecked && variantId) {
+    // Delete existing tasks
+    await sb.from('job_tasks').delete().eq('job_id', S.editJobId);
+    // Load new template
+    await loadTasksFromTemplate(S.editJobId, variantId);
+    // Reload jobs
+    await loadJobsForDay();
+    toast('Variant gewijzigd · taken herladen');
+  }
+
+  closeModal('m-edit-job');
+  await loadJobsForDay();
+  renderVehicleList();
+  if (S.selectedJob === S.editJobId) renderJobDetail(S.editJobId);
+  toast('Werkorder bijgewerkt ✓');
+  S.editJobId = null;
+}
 async function doLogout() {
   await sb.auth.signOut();
   window.location.href = 'workprep-login.html';
