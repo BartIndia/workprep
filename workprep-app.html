@@ -864,23 +864,32 @@ textarea.iif { min-height: 70px; resize: vertical; }
     <div class="two-col">
       <div class="ig">
         <label class="il">Merk</label>
-        <select class="iif" id="v-brand" onchange="onBrandChange()">
-          <option value="">— Merk —</option>
-        </select>
+        <div style="display:flex;gap:5px;">
+          <select class="iif" id="v-brand" onchange="onBrandChange()" style="flex:1;">
+            <option value="">— Merk —</option>
+          </select>
+          <button class="btn bgh bsm" style="padding:8px;flex-shrink:0;" onclick="quickAddBrand()" title="Nieuw merk">+</button>
+        </div>
       </div>
       <div class="ig">
         <label class="il">Model</label>
-        <select class="iif" id="v-model" onchange="onModelChange()">
-          <option value="">— Model —</option>
-        </select>
+        <div style="display:flex;gap:5px;">
+          <select class="iif" id="v-model" onchange="onModelChange()" style="flex:1;">
+            <option value="">— Model —</option>
+          </select>
+          <button class="btn bgh bsm" style="padding:8px;flex-shrink:0;" onclick="quickAddModel()" title="Nieuw model">+</button>
+        </div>
       </div>
     </div>
 
     <div class="ig">
       <label class="il">Variant / Motorisatie</label>
-      <select class="iif" id="v-variant">
-        <option value="">— Variant —</option>
-      </select>
+      <div style="display:flex;gap:5px;">
+        <select class="iif" id="v-variant" style="flex:1;">
+          <option value="">— Variant —</option>
+        </select>
+        <button class="btn bgh bsm" style="padding:8px;flex-shrink:0;" onclick="quickAddVariant()" title="Nieuwe variant">+</button>
+      </div>
     </div>
 
     <div class="ig">
@@ -1569,13 +1578,27 @@ async function saveVehicle() {
 }
 
 async function loadTasksFromTemplate(jobId, variantId) {
-  // Find template for this variant and customer
-  const { data: templates } = await sb.from('job_templates')
+  // First try customer-specific template, then fall back to global (null customer_id)
+  let templates = null;
+
+  // Try customer-specific first
+  const { data: custTpl } = await sb.from('job_templates')
     .select('id')
     .eq('variant_id', variantId)
-    .or(`customer_id.eq.${S.workDay.customer_id},customer_id.is.null`)
-    .order('customer_id', { nullsLast: false })
+    .eq('customer_id', S.workDay.customer_id)
     .limit(1);
+
+  if (custTpl?.length) {
+    templates = custTpl;
+  } else {
+    // Fall back to global template (customer_id is null)
+    const { data: globalTpl } = await sb.from('job_templates')
+      .select('id')
+      .eq('variant_id', variantId)
+      .is('customer_id', null)
+      .limit(1);
+    templates = globalTpl;
+  }
 
   if (!templates?.length) return;
 
@@ -2038,8 +2061,56 @@ async function saveDataField(taskId, fieldKey, value) {
 }
 
 // ================================================
-// ADD CUSTOMER
+// QUICK ADD BRAND / MODEL / VARIANT
 // ================================================
+async function quickAddBrand() {
+  const name = prompt('Nieuw merk:');
+  if (!name?.trim()) return;
+  const { data, error } = await sb.from('brands').insert({
+    organization_id: S.orgId,
+    name: name.trim(),
+  }).select().single();
+  if (error) { toast('Fout: ' + error.message); return; }
+  S.brands.push(data);
+  await loadBrands();
+  document.getElementById('v-brand').value = data.id;
+  toast('Merk toegevoegd: ' + data.name);
+}
+
+async function quickAddModel() {
+  const brandId = document.getElementById('v-brand').value;
+  if (!brandId) { toast('Selecteer eerst een merk'); return; }
+  const name = prompt('Nieuw model:');
+  if (!name?.trim()) return;
+  const { data, error } = await sb.from('models').insert({
+    brand_id: brandId,
+    name: name.trim(),
+  }).select().single();
+  if (error) { toast('Fout: ' + error.message); return; }
+  // Refresh model dropdown
+  await onBrandChange();
+  document.getElementById('v-model').value = data.id;
+  toast('Model toegevoegd: ' + data.name);
+}
+
+async function quickAddVariant() {
+  const modelId = document.getElementById('v-model').value;
+  if (!modelId) { toast('Selecteer eerst een model'); return; }
+  const name = prompt('Nieuwe variant (bv. Mild Hybrid B4):');
+  if (!name?.trim()) return;
+  const powertrain = prompt('Aandrijving? (petrol / diesel / mild_hybrid / full_hybrid / electric)', 'mild_hybrid');
+  const { data, error } = await sb.from('variants').insert({
+    model_id:                    modelId,
+    name:                        name.trim(),
+    powertrain_type:             powertrain?.trim() || 'other',
+    default_charging_duration_min:  30,
+    default_update_duration_min:    60,
+  }).select().single();
+  if (error) { toast('Fout: ' + error.message); return; }
+  await onModelChange();
+  document.getElementById('v-variant').value = data.id;
+  toast('Variant toegevoegd: ' + data.name);
+}
 function openAddCustomer() { openModal('m-customer'); }
 
 async function saveCustomer() {
