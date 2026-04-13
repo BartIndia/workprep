@@ -730,6 +730,17 @@ textarea.iif { min-height: 70px; resize: vertical; }
     <div id="day-timer" style="display:none;">⏱ 00:00:00</div>
   </div>
   <div id="topbar-right">
+    <!-- ROLE SWITCHER -->
+    <div style="display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:6px;overflow:hidden;flex-shrink:0;">
+      <button id="role-tech" onclick="setRole('technician')"
+        style="padding:5px 12px;border:none;cursor:pointer;font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:0.5px;transition:all .15s;background:var(--accent);color:var(--bg);">
+        🔧 Technieker
+      </button>
+      <button id="role-admin" onclick="setRole('admin')"
+        style="padding:5px 12px;border:none;cursor:pointer;font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:0.5px;transition:all .15s;background:transparent;color:var(--t2);">
+        ⚙️ Beheerder
+      </button>
+    </div>
     <button class="btn bgh bsm" id="break-btn" style="display:none;" onclick="toggleBreak()">☕ Pauze</button>
     <button class="btn br bsm" id="endday-btn" style="display:none;" onclick="confirmEndDay()">■ Dag Stoppen</button>
     <div style="font-size:12px;color:var(--t2);font-family:var(--fm);" id="user-name"></div>
@@ -821,6 +832,66 @@ textarea.iif { min-height: 70px; resize: vertical; }
   </div>
 
 </div><!-- end main-content -->
+
+<!-- ADMIN VIEW (hidden by default, shown when role = admin) -->
+<div id="admin-view" style="display:none;flex:1;overflow-y:auto;padding:20px;background:var(--bg);">
+  <div style="max-width:900px;margin:0 auto;">
+
+    <!-- Admin header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:20px;font-weight:700;letter-spacing:1px;">⚙️ Beheerder</div>
+        <div style="font-size:12px;color:var(--t2);font-family:var(--fm);margin-top:2px;" id="admin-sub">Overzicht en instellingen</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;" id="admin-stats">
+      <div class="stat-box"><div class="stat-val" id="as-vehicles">0</div><div class="stat-lbl">Voertuigen</div></div>
+      <div class="stat-box"><div class="stat-val g" id="as-done">0</div><div class="stat-lbl">Klaar</div></div>
+      <div class="stat-box"><div class="stat-val" id="as-tasks">0/0</div><div class="stat-lbl">Taken</div></div>
+      <div class="stat-box"><div class="stat-val" id="as-time" style="font-size:14px;">00:00</div><div class="stat-lbl">Werktijd</div></div>
+    </div>
+
+    <!-- All vehicles table -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);">Voertuigen vandaag</div>
+        <button class="btn bp bsm" onclick="setRole('technician');openAddVehicle()">+ Voertuig</button>
+      </div>
+      <div id="admin-vehicle-table" style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--bg3);">
+              <th style="padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);text-align:left;border-bottom:1px solid var(--border);">Voertuig</th>
+              <th style="padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);text-align:left;border-bottom:1px solid var(--border);">Werkorder</th>
+              <th style="padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);text-align:left;border-bottom:1px solid var(--border);">Status</th>
+              <th style="padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);text-align:left;border-bottom:1px solid var(--border);">Tijd</th>
+              <th style="padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);text-align:left;border-bottom:1px solid var(--border);">Taken</th>
+              <th style="padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);text-align:left;border-bottom:1px solid var(--border);"></th>
+            </tr>
+          </thead>
+          <tbody id="admin-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick settings -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);margin-bottom:12px;">Klanten</div>
+        <div id="admin-customers-list" style="margin-bottom:10px;"></div>
+        <button class="btn bgh bsm bfull" onclick="openAddCustomer()">+ Klant toevoegen</button>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);margin-bottom:12px;">Merken in DB</div>
+        <div id="admin-brands-list" style="margin-bottom:10px;"></div>
+        <button class="btn bgh bsm bfull" onclick="quickAddBrand()">+ Merk toevoegen</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- MOBILE NAV -->
 <div id="mobile-nav">
@@ -2061,8 +2132,95 @@ async function saveDataField(taskId, fieldKey, value) {
 }
 
 // ================================================
-// QUICK ADD BRAND / MODEL / VARIANT
+// ROLE SWITCHER
 // ================================================
+let currentRole = 'technician';
+
+function setRole(role) {
+  currentRole = role;
+
+  const techBtn  = document.getElementById('role-tech');
+  const adminBtn = document.getElementById('role-admin');
+  const mainContent  = document.getElementById('main-content');
+  const adminView    = document.getElementById('admin-view');
+  const mobileNav    = document.getElementById('mobile-nav');
+
+  if (role === 'technician') {
+    // Highlight tech button
+    techBtn.style.background  = 'var(--accent)';
+    techBtn.style.color       = 'var(--bg)';
+    adminBtn.style.background = 'transparent';
+    adminBtn.style.color      = 'var(--t2)';
+    // Show main content, hide admin
+    mainContent.style.display = 'flex';
+    adminView.style.display   = 'none';
+    mobileNav.style.display   = window.innerWidth <= 768 ? 'block' : 'none';
+  } else {
+    // Highlight admin button
+    adminBtn.style.background = 'var(--accent)';
+    adminBtn.style.color      = 'var(--bg)';
+    techBtn.style.background  = 'transparent';
+    techBtn.style.color       = 'var(--t2)';
+    // Show admin view, hide main content
+    mainContent.style.display = 'none';
+    adminView.style.display   = 'flex';
+    mobileNav.style.display   = 'none';
+    renderAdminView();
+  }
+}
+
+function renderAdminView() {
+  // Update stats
+  const total   = S.jobs.length;
+  const done    = S.jobs.filter(j => j.status === 'done').length;
+  const allT    = S.jobs.reduce((a,j) => a + (j.job_tasks?.length||0), 0);
+  const doneT   = S.jobs.reduce((a,j) => a + (j.job_tasks?.filter(t=>t.is_checked).length||0), 0);
+
+  document.getElementById('as-vehicles').textContent = total;
+  document.getElementById('as-done').textContent     = done;
+  document.getElementById('as-tasks').textContent    = `${doneT}/${allT}`;
+  document.getElementById('admin-sub').textContent   =
+    (S.customer?.name || 'Geen actieve dag') + ' · ' +
+    new Date().toLocaleDateString('nl-BE', {weekday:'long', day:'numeric', month:'long'});
+
+  // Vehicle table
+  const tbody = document.getElementById('admin-tbody');
+  if (!S.jobs.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--t3);font-size:12px;">Geen voertuigen vandaag</td></tr>`;
+  } else {
+    tbody.innerHTML = S.jobs.map(job => {
+      const name    = getJobName(job.id);
+      const elapsed = getJobElapsed(job.id);
+      const pct     = getJobProgress(job.id);
+      const done    = job.job_tasks?.filter(t=>t.is_checked).length || 0;
+      const total   = job.job_tasks?.length || 0;
+      const scls    = `s-${job.status}`;
+      return `<tr style="border-bottom:1px solid rgba(51,65,85,0.4);">
+        <td style="padding:10px 14px;font-size:12px;font-weight:600;">${name}</td>
+        <td style="padding:10px 14px;font-family:var(--fm);font-size:11px;color:var(--accent);">${job.work_order||'—'}</td>
+        <td style="padding:10px 14px;"><span class="sbadge ${scls}">${statusLabel(job.status)}</span></td>
+        <td style="padding:10px 14px;font-family:var(--fm);font-size:12px;" id="adm-vt-${job.id}">${fmtTime(elapsed)}</td>
+        <td style="padding:10px 14px;">
+          <div style="font-size:11px;color:var(--t2);margin-bottom:3px;">${done}/${total}</div>
+          <div class="pbar" style="width:80px;"><div class="pfill ${pct===100?'done':''}" style="width:${pct}%"></div></div>
+        </td>
+        <td style="padding:10px 14px;">
+          <button class="btn bgh bsm" onclick="setRole('technician');selectJob('${job.id}')">Bekijken</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Customers list
+  document.getElementById('admin-customers-list').innerHTML =
+    S.customers.map(c => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);color:var(--t2);">${c.name}</div>`).join('') ||
+    '<div style="font-size:11px;color:var(--t3);">Nog geen klanten</div>';
+
+  // Brands list
+  document.getElementById('admin-brands-list').innerHTML =
+    S.brands.map(b => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);color:var(--t2);">${b.name}</div>`).join('') ||
+    '<div style="font-size:11px;color:var(--t3);">Nog geen merken</div>';
+}
 async function quickAddBrand() {
   const name = prompt('Nieuw merk:');
   if (!name?.trim()) return;
