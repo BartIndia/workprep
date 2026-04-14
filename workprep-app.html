@@ -890,6 +890,16 @@ textarea.iif { min-height: 70px; resize: vertical; }
       </div>
     </div>
 
+    <!-- Recent work days history -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:14px;">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);">Recente werkdagen</div>
+      </div>
+      <div id="admin-history" style="padding:4px 0;">
+        <div style="padding:12px 16px;font-size:12px;color:var(--t3);">Laden...</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1419,12 +1429,33 @@ async function loadJobsForDay() {
       brands(name),
       models(name),
       variants(name, default_charging_duration_min, default_update_duration_min),
-      job_tasks(*)
+      job_tasks(*),
+      work_sessions(*)
     `)
     .eq('work_day_id', S.workDay.id)
     .order('created_at');
 
   S.jobs = data || [];
+
+  // Pre-calculate stored elapsed time per job from completed sessions
+  S.jobs.forEach(job => {
+    const completedMs = (job.work_sessions || [])
+      .filter(s => s.ended_at && s.session_type === 'work')
+      .reduce((sum, s) => {
+        return sum + (new Date(s.ended_at) - new Date(s.started_at));
+      }, 0);
+    job._storedElapsed = completedMs;
+
+    // Restart timer if job is active
+    if (job.status === 'active') {
+      const openSession = (job.work_sessions || []).find(s => !s.ended_at);
+      if (openSession) {
+        S.sessions[job.id] = openSession;
+        startJobTimer(job.id);
+      }
+    }
+  });
+
   renderVehicleList();
   updateRightPanel();
 }
@@ -2220,7 +2251,102 @@ function renderAdminView() {
   document.getElementById('admin-brands-list').innerHTML =
     S.brands.map(b => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);color:var(--t2);">${b.name}</div>`).join('') ||
     '<div style="font-size:11px;color:var(--t3);">Nog geen merken</div>';
+
+  // Load history
+  loadWorkDayHistory();
 }
+
+// ================================================
+// WORK DAY HISTORY
+// ================================================
+async function loadWorkDayHistory() {
+  const { data: days } = await sb.from('work_days')
+    .select('*, customers(name)')
+    .eq('user_id', S.user.id)
+    .order('date', { ascending: false })
+    .limit(14);
+
+  const el = document.getElementById('admin-history');
+  if (!days?.length) {
+    el.innerHTML = '<div style="padding:12px 16px;font-size:12px;color:var(--t3);">Nog geen werkdagen</div>';
+    return;
+  }
+
+  el.innerHTML = days.map(day => {
+    const isToday = day.date === new Date().toISOString().slice(0,10);
+    const start   = day.actual_start ? new Date(day.actual_start).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'}) : '—';
+    const end     = day.actual_end   ? new Date(day.actual_end).toLocaleTimeString('nl-BE',  {hour:'2-digit',minute:'2-digit'}) : '—';
+    const dateStr = new Date(day.date).toLocaleDateString('nl-BE',{weekday:'short',day:'numeric',month:'short'});
+    return `<div style="padding:10px 16px;border-bottom:1px solid rgba(51,65,85,0.3);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:${isToday?'var(--accent)':'var(--text)'};">${isToday?'📌 Vandaag':dateStr}</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:2px;">${day.customers?.name||'—'} · ${start} → ${end}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:10px;padding:2px 7px;border-radius:3px;font-family:var(--fm);
+          background:${day.status==='closed'?'rgba(71,85,105,0.3)':'rgba(34,197,94,0.15)'};
+          color:${day.status==='closed'?'var(--t3)':'var(--green)'};
+          border:1px solid ${day.status==='closed'?'var(--border)':'rgba(34,197,94,0.3)'};">
+          ${day.status==='closed'?'Gesloten':'Open'}
+        </span>
+        <button class="btn bgh bsm" onclick="loadHistoryDay('${day.id}','${day.date}')">Bekijken</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadHistoryDay(workDayId, date) {
+  const { data } = await sb.from('jobs')
+    .select('*, brands(name), models(name), variants(name), job_tasks(*), work_sessions(*)')
+    .eq('work_day_id', workDayId)
+    .order('created_at');
+
+  const jobs    = data || [];
+  const dateStr = new Date(date).toLocaleDateString('nl-BE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const total   = jobs.length;
+  const done    = jobs.filter(j => j.status === 'done').length;
+
+  const jobRows = jobs.map(job => {
+    const name   = [job.brands?.name, job.models?.name].filter(Boolean).join(' ') || job.work_order || '—';
+    const totalMs= (job.work_sessions||[]).filter(s=>s.ended_at)
+      .reduce((sum,s) => sum + (new Date(s.ended_at) - new Date(s.started_at)), 0);
+    const tasks  = job.job_tasks || [];
+    const pct    = tasks.length ? Math.round(tasks.filter(t=>t.is_checked).length/tasks.length*100) : 0;
+    return `<tr style="border-bottom:1px solid rgba(51,65,85,0.3);">
+      <td style="padding:8px 12px;font-size:12px;">${name}</td>
+      <td style="padding:8px 12px;font-family:var(--fm);font-size:11px;color:var(--accent);">${job.work_order||'—'}</td>
+      <td style="padding:8px 12px;font-family:var(--fm);font-size:12px;">${fmtTime(totalMs)}</td>
+      <td style="padding:8px 12px;font-size:11px;color:var(--t2);">${pct}%</td>
+      <td style="padding:8px 12px;"><span class="sbadge s-${job.status}">${statusLabel(job.status)}</span></td>
+    </tr>`;
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;width:100%;max-width:600px;max-height:80vh;overflow-y:auto;">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:15px;font-weight:700;">${dateStr}</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:2px;">${total} voertuigen · ${done} klaar</div>
+        </div>
+        <button class="btn bgh bsm" onclick="this.closest('[style]').remove()">✕ Sluiten</button>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="background:var(--bg3);">
+          <th style="padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);text-align:left;">Voertuig</th>
+          <th style="padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);text-align:left;">WO</th>
+          <th style="padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);text-align:left;">Tijd</th>
+          <th style="padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);text-align:left;">Taken</th>
+          <th style="padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);text-align:left;">Status</th>
+        </tr></thead>
+        <tbody>${jobRows||'<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--t3);">Geen voertuigen</td></tr>'}</tbody>
+      </table>
+    </div>`;
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
 async function quickAddBrand() {
   const name = prompt('Nieuw merk:');
   if (!name?.trim()) return;
@@ -2339,7 +2465,8 @@ async function saveTimeAdjustment() {
 function startJobTimer(jobId) {
   if (S.timers[jobId]) stopJobTimer(jobId);
   const session = S.sessions[jobId];
-  const base    = getStoredElapsed(jobId);
+  // Base = all previously completed sessions for this job
+  const base = getStoredElapsed(jobId);
 
   S.timers[jobId] = {
     startMs: session ? new Date(session.started_at).getTime() : Date.now(),
@@ -2375,9 +2502,9 @@ function getJobElapsed(jobId) {
 }
 
 function getStoredElapsed(jobId) {
-  // Sum up all completed sessions for this job
-  // For now return 0 — will be fetched from DB in full version
-  return 0;
+  // Return pre-calculated elapsed from completed sessions
+  const job = S.jobs.find(j => j.id === jobId);
+  return job?._storedElapsed || 0;
 }
 
 function getJobProgress(jobId) {
