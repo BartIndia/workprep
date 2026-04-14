@@ -1435,9 +1435,26 @@ async function loadJobsForDay() {
     .eq('work_day_id', S.workDay.id)
     .order('created_at');
 
-  S.jobs = data || [];
+  // Also load paused jobs from previous days that belong to this user
+  // so they can be resumed today
+  const { data: prevJobs } = await sb.from('jobs')
+    .select(`
+      *,
+      brands(name),
+      models(name),
+      variants(name, default_charging_duration_min, default_update_duration_min),
+      job_tasks(*),
+      work_sessions(*)
+    `)
+    .eq('user_id', S.user.id)
+    .eq('status', 'paused')
+    .neq('work_day_id', S.workDay.id)
+    .order('created_at');
 
-  // Pre-calculate stored elapsed time per job from completed sessions
+  // Combine today's jobs with paused jobs from previous days
+  S.jobs = [...(data || []), ...(prevJobs || [])];
+
+  // Pre-calculate stored elapsed time per job from ALL completed sessions
   S.jobs.forEach(job => {
     const completedMs = (job.work_sessions || [])
       .filter(s => s.ended_at && s.session_type === 'work')
@@ -1451,8 +1468,8 @@ async function loadJobsForDay() {
       const openSession = (job.work_sessions || []).find(s => !s.ended_at);
       if (openSession) {
         S.sessions[job.id] = openSession;
-        startJobTimer(job.id);
       }
+      startJobTimer(job.id);
     }
   });
 
@@ -1779,37 +1796,74 @@ async function resumeJob(jobId) {
   const activeJob = S.jobs.find(j => j.status === 'active');
   if (activeJob && activeJob.id !== jobId) await pauseJob(activeJob.id, true);
 
-  await sb.from('jobs').update({ status: 'active' }).eq('id', jobId);
-  await startSession(jobId);
-
+  // If job is from a previous day, link it to today's work day
   const job = S.jobs.find(j => j.id === jobId);
+  const isFromPreviousDay = job && job.work_day_id !== S.workDay?.id;
+
+  if (isFromPreviousDay && S.workDay) {
+    // Update job to belong to today's work day
+    await sb.from('jobs').update({
+      status: 'active',
+      work_day_id: S.workDay.id,
+    }).eq('id', jobId);
+    if (job) job.work_day_id = S.workDay.id;
+  } else {
+    await sb.from('jobs').update({ status: 'active' }).eq('id', jobId);
+  }
+
+  await startSession(jobId);
   if (job) job.status = 'active';
   renderVehicleList();
   renderJobDetail(jobId);
 
   const name = getJobName(jobId);
-  addTimeline('Hervat: ' + name);
+  addTimeline('Hervat: ' + name + (isFromPreviousDay ? ' (vorige dag)' : ''));
   toast('Hervat: ' + name);
 }
 
 async function completeJob(jobId) {
-  confirm('Voertuig afronden', 'Markeer dit voertuig als klaar?', async () => {
-    await endSession(jobId);
-    await sb.from('jobs').update({ status: 'done' }).eq('id', jobId);
+  const job = S.jobs.find(j => j.id === jobId);
+  if (!job) return;
 
-    const job = S.jobs.find(j => j.id === jobId);
-    if (job) job.status = 'done';
-    renderVehicleList();
-    renderJobDetail(jobId);
-    updateRightPanel();
+  // Check for uncompleted tasks
+  const unfinished = (job.job_tasks || []).filter(t => !t.is_checked).length;
+  const total      = (job.job_tasks || []).length;
 
-    const name = getJobName(jobId);
-    addTimeline('Klaar: ' + name);
-    toast('✓ Klaar: ' + name);
+  if (unfinished > 0) {
+    // Show warning with unchecked task count
+    confirm(
+      '⚠ Niet alle taken afgevinkt',
+      `Er zijn nog ${unfinished} van de ${total} taken niet afgevinkt. Ben je zeker dat je dit voertuig wil afsluiten?`,
+      async () => {
+        await _doCompleteJob(jobId);
+      }
+    );
+    // Change confirm button to warn color
+    setTimeout(() => {
+      const btn = document.getElementById('conf-ok');
+      if (btn) { btn.textContent = 'Toch afsluiten'; btn.className = 'btn bw'; btn.style.flex = '1'; }
+    }, 50);
+  } else {
+    confirm('Voertuig afronden', 'Alle taken zijn afgevinkt. Markeer dit voertuig als klaar?', async () => {
+      await _doCompleteJob(jobId);
+    });
+  }
+}
 
-    // Notify customer contact
-    notifyCustomer(jobId, name);
-  });
+async function _doCompleteJob(jobId) {
+  await endSession(jobId);
+  await sb.from('jobs').update({ status: 'done' }).eq('id', jobId);
+
+  const job = S.jobs.find(j => j.id === jobId);
+  if (job) job.status = 'done';
+  renderVehicleList();
+  renderJobDetail(jobId);
+  updateRightPanel();
+
+  const name = getJobName(jobId);
+  addTimeline('Klaar: ' + name);
+  toast('✓ Klaar: ' + name);
+  notifyCustomer(jobId, name);
 }
 
 async function startCharging(jobId) {
