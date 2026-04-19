@@ -917,14 +917,15 @@ async function init() {
     .in('role', ['customer_admin', 'customer_accountant'])
     .maybeSingle();
 
-  if (!roleData) {
-    // No customer role — redirect to technician app
-    window.location.href = 'workprep-app.html';
-    return;
-  }
+  // Allow access without customer role (e.g. superuser navigating directly)
+  S.userRole    = roleData?.role || 'customer_admin';
+  S.customerId  = roleData?.customer_id || null;
 
-  S.userRole = roleData.role;
-  S.customerId = roleData.customer_id;
+  // If no specific customer, use the first available
+  if (!S.customerId) {
+    const { data: firstCustomer } = await sb.from('customers').select('id').limit(1).single();
+    S.customerId = firstCustomer?.id || null;
+  }
 
   document.getElementById('user-name').textContent = userData.full_name;
   document.getElementById('user-role-label').textContent =
