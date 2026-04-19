@@ -1046,15 +1046,7 @@ textarea.iif { min-height: 70px; resize: vertical; }
 </div>
 
 <!-- TEMPLATE CHOOSER MODAL -->
-<div class="mo" id="m-template">
-  <div class="md">
-    <div class="mo-handle"></div>
-    <div class="mo-title">📋 Taaktemplate Kiezen</div>
-    <p style="font-size:12px;color:var(--t2);margin-bottom:12px;">Kies een template voor de taken van deze job. Je kunt daarna nog manueel taken toevoegen.</p>
-    <div id="template-list" style="max-height:50vh;overflow-y:auto;"></div>
-    <button class="btn bgh bfull" style="margin-top:10px;" onclick="skipTemplate()">Geen template — start zonder taken</button>
-  </div>
-</div>
+
 
 <!-- ADD CUSTOMER MODAL -->
 <div class="mo" id="m-customer">
@@ -1080,31 +1072,60 @@ textarea.iif { min-height: 70px; resize: vertical; }
   </div>
 </div>
 
-<!-- ADD TASK MODAL -->
+<!-- ADD TASK MODAL — keuze: template of 1 taak -->
 <div class="mo" id="m-task">
   <div class="md">
     <div class="mo-handle"></div>
-    <div class="mo-title">➕ Taak Toevoegen</div>
-    <div class="ig">
-      <label class="il">Omschrijving</label>
-      <input type="text" class="iif" id="t-label" placeholder="Beschrijf de taak">
+    <div class="mo-title">➕ Taken Toevoegen</div>
+
+    <!-- Keuze-sectie -->
+    <div id="task-choice" style="display:block;">
+      <div onclick="showTaskSection('template')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:24px;">📋</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;">Template laden</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:2px;">Voeg een hele reeks taken toe in één klik</div>
+        </div>
+      </div>
+      <div onclick="showTaskSection('manual')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:24px;">✏️</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;">Één taak toevoegen</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:2px;">Voeg een manuele taak toe</div>
+        </div>
+      </div>
+      <button class="btn bgh bfull" style="margin-top:4px;" onclick="closeModal('m-task')">Annuleren</button>
     </div>
-    <div class="ig">
-      <label class="il">Categorie</label>
-      <select class="iif" id="t-cat">
-        <option value="PDI">PDI</option>
-        <option value="Software">Software</option>
-        <option value="Opties">Opties / Pakketten</option>
-        <option value="Garantie">Garantie</option>
-        <option value="Mechanisch">Mechanisch</option>
-        <option value="Carrosserie">Carrosserie</option>
-        <option value="Admin">Admin</option>
-        <option value="Overige">Overige</option>
-      </select>
+
+    <!-- Template sectie -->
+    <div id="task-section-template" style="display:none;">
+      <div id="task-template-list"></div>
+      <button class="btn bgh bfull" style="margin-top:8px;" onclick="showTaskSection('choice')">← Terug</button>
     </div>
-    <div style="display:flex;gap:8px;margin-top:8px;">
-      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-task')">Annuleren</button>
-      <button class="btn bp" style="flex:2;" onclick="saveTask()">Taak Toevoegen</button>
+
+    <!-- Manuele taak sectie -->
+    <div id="task-section-manual" style="display:none;">
+      <div class="ig">
+        <label class="il">Omschrijving</label>
+        <input type="text" class="iif" id="t-label" placeholder="Beschrijf de taak">
+      </div>
+      <div class="ig">
+        <label class="il">Categorie</label>
+        <select class="iif" id="t-cat">
+          <option value="PDI">PDI</option>
+          <option value="Software">Software</option>
+          <option value="Opties">Opties / Pakketten</option>
+          <option value="Garantie">Garantie</option>
+          <option value="Mechanisch">Mechanisch</option>
+          <option value="Carrosserie">Carrosserie</option>
+          <option value="Admin">Admin</option>
+          <option value="Overige">Overige</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn bgh" style="flex:1;" onclick="showTaskSection('choice')">← Terug</button>
+        <button class="btn bp" style="flex:2;" onclick="saveTask()">Taak Toevoegen</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1695,47 +1716,14 @@ async function saveVehicle() {
   const name = [job.brands?.name, job.models?.name].filter(Boolean).join(' ') || wo;
   addTimeline('Gestart: ' + name);
   toast('Gestart: ' + name);
-
-  // Show template chooser
-  await openTemplateChooser(job.id, variantId);
 }
 
 // ================================================
 // TEMPLATE CHOOSER
 // ================================================
-async function openTemplateChooser(jobId, variantId) {
-  S.templateJobId = jobId;
-
-  // Fetch available templates: customer-specific + generic (null customer_id)
-  const conditions = [`customer_id.eq.${S.workDay.customer_id}`, `customer_id.is.null`];
-  let query = sb.from('job_templates').select('id, name, customer_id').order('customer_id', { nullsLast: true });
-  if (variantId) query = query.eq('variant_id', variantId);
-  else query = query.is('variant_id', null);
-
-  const { data: templates } = await query;
-
-  if (!templates?.length) {
-    // No templates available — skip silently
-    return;
-  }
-
-  const html = templates.map(t => {
-    const tag = t.customer_id ? `<span class="tag">klantspecifiek</span>` : `<span class="tag" style="background:rgba(34,197,94,0.1);color:var(--green);border-color:rgba(34,197,94,0.2);">generiek</span>`;
-    return `<div onclick="applyTemplate('${t.id}')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:13px;font-weight:600;">${escHtml(t.name)}</div>
-        ${tag}
-      </div>
-    </div>`;
-  }).join('');
-
-  document.getElementById('template-list').innerHTML = html;
-  openModal('m-template');
-}
-
 async function applyTemplate(templateId) {
-  closeModal('m-template');
-  const jobId = S.templateJobId;
+  closeModal('m-task');
+  const jobId = S.selectedJob;
   if (!jobId) return;
 
   const { data: tasks } = await sb.from('job_template_tasks')
@@ -1752,18 +1740,16 @@ async function applyTemplate(templateId) {
     label:             t.label,
     task_type:         t.task_type,
     order_index:       t.order_index,
-    data_field_config: t.data_field_config,
     is_custom:         false,
   }));
 
-  await sb.from('job_tasks').insert(jobTasks);
-  await loadJobsForDay();
-  toast('Template geladen ✓');
-}
+  const { error: insertError } = await sb.from('job_tasks').insert(jobTasks);
+  console.log('job_tasks insert — jobId:', jobId, 'count:', jobTasks.length, 'error:', insertError);
+  if (insertError) { toast('Fout bij laden taken: ' + insertError.message); return; }
 
-function skipTemplate() {
-  closeModal('m-template');
-  toast('Gestart zonder template');
+  await loadJobsForDay();
+  if (S.selectedJob) renderJobDetail(S.selectedJob);
+  toast('Template geladen ✓');
 }
 
 // ================================================
@@ -1999,7 +1985,61 @@ async function toggleTask(taskId, jobId) {
 function openAddTask() {
   if (!S.selectedJob) return;
   document.getElementById('t-label').value = '';
+  showTaskSection('choice');
   openModal('m-task');
+}
+
+function showTaskSection(section) {
+  ['choice','template','manual'].forEach(s => {
+    const el = document.getElementById(s === 'choice' ? 'task-choice' : `task-section-${s}`);
+    if (el) el.style.display = s === section ? 'block' : 'none';
+  });
+
+  if (section === 'template') {
+    loadTaskTemplateList();
+  }
+}
+
+async function loadTaskTemplateList() {
+  const job = S.jobs.find(j => j.id === S.selectedJob);
+  const variantId = job?.variant_id || null;
+
+  // Twee aparte queries, dan samenvoegen
+  const [{ data: variantTpls }, { data: genericTpls }] = await Promise.all([
+    variantId
+      ? sb.from('job_templates')
+          .select('id, name, customer_id, variant_id')
+          .eq('variant_id', variantId)
+          .or(`customer_id.eq.${S.workDay.customer_id},customer_id.is.null`)
+      : Promise.resolve({ data: [] }),
+    sb.from('job_templates')
+      .select('id, name, customer_id, variant_id')
+      .is('variant_id', null)
+      .or(`customer_id.eq.${S.workDay.customer_id},customer_id.is.null`),
+  ]);
+
+  const templates = [...(variantTpls || []), ...(genericTpls || [])];
+  console.log('Templates gevonden:', templates);
+
+  const list = document.getElementById('task-template-list');
+  if (!templates?.length) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Geen templates beschikbaar voor dit voertuig</div>';
+    return;
+  }
+
+  list.innerHTML = templates.map(t => {
+    const tag = t.customer_id
+      ? `<span class="tag">klantspecifiek</span>`
+      : t.variant_id
+        ? `<span class="tag" style="background:rgba(34,197,94,0.1);color:var(--green);border-color:rgba(34,197,94,0.2);">variant</span>`
+        : `<span class="tag" style="background:rgba(148,163,184,0.1);color:var(--t2);border-color:var(--border);">algemeen</span>`;
+    return `<div onclick="applyTemplate('${t.id}')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;font-weight:600;">${escHtml(t.name)}</div>
+        ${tag}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function saveTask() {
