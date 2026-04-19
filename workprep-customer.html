@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>WorkPrep — Klant</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ================================================
+   RESET & VARIABLES
+================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg:      #0f172a;
+  --bg2:     #1e293b;
+  --bg3:     #273449;
+  --panel:   #1a2744;
+  --border:  #334155;
+  --accent:  #3b82f6;
+  --a2:      #2563eb;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --warn:    #f59e0b;
+  --purple:  #a855f7;
+  --text:    #f1f5f9;
+  --t2:      #94a3b8;
+  --t3:      #475569;
+  --fh:      'Syne', sans-serif;
+  --fm:      'JetBrains Mono', monospace;
+  --shadow:  0 4px 24px rgba(0,0,0,0.4);
+}
+
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--fh); }
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ================================================
+   APP SHELL
+================================================ */
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* TOPBAR */
+#topbar {
+  height: 52px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.logo { font-size: 16px; font-weight: 800; letter-spacing: 2px; flex-shrink: 0; }
+.logo span { color: var(--accent); }
+.logo-badge { font-size: 9px; font-family: var(--fm); color: var(--t3); letter-spacing: 1px; text-transform: uppercase; margin-left: 4px; }
+
+#topbar-tabs { display: flex; gap: 2px; flex: 1; }
+.tab-btn {
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--t3);
+  font-family: var(--fh);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); background: var(--bg3); }
+.tab-btn.active { color: var(--accent); background: rgba(59,130,246,0.1); }
+
+#topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.notif-bell {
+  position: relative;
+  width: 32px; height: 32px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.notif-bell:hover { border-color: var(--accent); }
+.notif-bell svg { width: 16px; height: 16px; color: var(--t2); }
+.notif-badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  width: 16px; height: 16px;
+  background: var(--red);
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--fm);
+  display: flex; align-items: center; justify-content: center;
+  display: none;
+}
+
+.user-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.user-chip-role { font-size: 10px; color: var(--t3); font-family: var(--fm); }
+
+.btn-icon {
+  width: 32px; height: 32px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all .15s;
+  color: var(--t2);
+}
+.btn-icon:hover { border-color: var(--red); color: var(--red); }
+.btn-icon svg { width: 15px; height: 15px; }
+
+/* ================================================
+   VIEWS
+================================================ */
+#views { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+.view { display: none; flex: 1; overflow: hidden; }
+.view.active { display: flex; }
+
+/* ================================================
+   CHEF VIEW — 3 columns
+================================================ */
+#view-chef { flex-direction: row; }
+
+.col { display: flex; flex-direction: column; overflow: hidden; }
+.col-left-chef { width: 280px; background: var(--bg2); border-right: 1px solid var(--border); flex-shrink: 0; }
+.col-center-chef { flex: 1; background: var(--bg); }
+.col-right-chef { width: 280px; background: var(--bg2); border-left: 1px solid var(--border); flex-shrink: 0; }
+
+.col-header {
+  height: 44px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.col-title { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--t2); flex: 1; }
+.col-body { flex: 1; overflow-y: auto; padding: 10px; }
+
+/* ================================================
+   TECHNICIAN CARDS
+================================================ */
+.tech-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.tech-card:hover { border-color: var(--t2); }
+.tech-card.selected { border-color: var(--accent); background: rgba(59,130,246,0.06); }
+
+.tech-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.tech-jobs { font-size: 11px; color: var(--t2); margin-top: 2px; }
+
+.job-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 10px;
+  color: var(--t2);
+  margin-top: 6px;
+  font-family: var(--fm);
+}
+.job-pill.s-active   { border-color: rgba(34,197,94,0.4);  color: var(--green); }
+.job-pill.s-paused   { border-color: rgba(245,158,11,0.4); color: var(--warn); }
+.job-pill.s-done     { border-color: var(--border);         color: var(--t3); }
+.job-pill.s-waiting  { border-color: var(--border);         color: var(--t3); }
+.job-pill.s-unassigned { border-color: rgba(239,68,68,0.4); color: var(--red); }
+.job-pill.s-rejected { border-color: rgba(239,68,68,0.4);  color: var(--red); }
+
+/* ================================================
+   JOB DETAIL — CENTER
+================================================ */
+#chef-job-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%;
+  color: var(--t3);
+}
+#chef-job-empty svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: .3; }
+#chef-job-empty p { font-size: 13px; }
+
+#chef-job-content { display: none; height: 100%; overflow-y: auto; padding: 16px; }
+
+.cjob-header {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.cjob-title { font-size: 18px; font-weight: 700; }
+.cjob-meta { font-size: 11px; color: var(--t2); font-family: var(--fm); margin-top: 4px; }
+.cjob-timer { font-size: 24px; font-family: var(--fm); color: var(--green); margin: 8px 0 10px; }
+
+.cjob-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.task-section { margin-bottom: 14px; }
+.task-cat { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--t3); padding: 4px 0; display: flex; justify-content: space-between; }
+.task-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px; margin-bottom: 5px;
+}
+.task-check {
+  width: 16px; height: 16px; border-radius: 4px;
+  background: var(--bg3); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.task-item.checked .task-check { background: var(--green); border-color: var(--green); }
+.task-label { font-size: 12px; color: var(--text); }
+.task-item.checked .task-label { text-decoration: line-through; color: var(--t3); }
+
+.note-box {
+  background: rgba(59,130,246,0.05);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.note-ts { font-size: 10px; color: var(--t3); font-family: var(--fm); margin-bottom: 4px; }
+.note-text { font-size: 13px; color: var(--t2); }
+
+/* ================================================
+   UNASSIGNED JOBS — right panel
+================================================ */
+.unassigned-card {
+  background: var(--panel);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.unassigned-wo { font-size: 12px; font-weight: 700; font-family: var(--fm); color: var(--red); }
+.unassigned-car { font-size: 11px; color: var(--t2); margin-top: 2px; }
+.unassigned-reason { font-size: 11px; color: var(--warn); margin-top: 6px; font-style: italic; }
+
+/* ================================================
+   REPORT VIEW
+================================================ */
+#view-report { flex-direction: column; overflow: hidden; }
+.report-toolbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.rf { display: flex; flex-direction: column; gap: 4px; }
+.rl { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--t3); }
+.ri {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  color: var(--text);
+  font-family: var(--fh);
+  font-size: 13px;
+  outline: none;
+}
+.ri:focus { border-color: var(--accent); }
+.ri option { background: var(--bg3); }
+
+#report-body { flex: 1; overflow: auto; padding: 20px; }
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.report-table th {
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid var(--border);
+}
+.report-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(51,65,85,0.5);
+  color: var(--text);
+  font-family: var(--fm);
+  font-size: 11px;
+}
+.report-table tr:hover td { background: var(--bg2); }
+.report-table .subtotal td { background: rgba(59,130,246,0.06); font-weight: 700; color: var(--accent); }
+.report-table .grandtotal td { background: rgba(34,197,94,0.08); font-weight: 700; color: var(--green); }
+.report-table .no-data td { text-align: center; color: var(--t3); padding: 40px; font-family: var(--fh); }
+
+/* ================================================
+   TEMPLATES VIEW
+================================================ */
+#view-templates { flex-direction: row; }
+.col-left-tpl { width: 300px; background: var(--bg2); border-right: 1px solid var(--border); flex-shrink: 0; }
+.col-right-tpl { flex: 1; background: var(--bg); }
+
+.tpl-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.tpl-card:hover { border-color: var(--t2); }
+.tpl-card.selected { border-color: var(--accent); background: rgba(59,130,246,0.06); }
+.tpl-name { font-size: 13px; font-weight: 700; }
+.tpl-meta { font-size: 10px; color: var(--t3); font-family: var(--fm); margin-top: 3px; }
+
+.tpl-detail { height: 100%; overflow-y: auto; padding: 16px; }
+.tpl-task-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px; margin-bottom: 6px;
+}
+.tpl-task-idx { font-size: 10px; font-family: var(--fm); color: var(--t3); width: 20px; text-align: center; flex-shrink: 0; }
+.tpl-task-info { flex: 1; }
+.tpl-task-label { font-size: 12px; font-weight: 600; }
+.tpl-task-cat { font-size: 10px; color: var(--t3); font-family: var(--fm); margin-top: 1px; }
+.tpl-task-type { font-size: 10px; font-family: var(--fm); color: var(--accent); }
+.tpl-task-actions { display: flex; gap: 4px; }
+
+/* ================================================
+   NOTIFICATIONS PANEL
+================================================ */
+.notif-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.notif-item.unread { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.05); }
+.notif-item:hover { border-color: var(--t2); }
+.notif-type { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
+.notif-msg { font-size: 12px; color: var(--text); }
+.notif-ts { font-size: 10px; color: var(--t3); font-family: var(--fm); margin-top: 4px; }
+
+/* ================================================
+   BUTTONS
+================================================ */
+.btn {
+  border: none; border-radius: 8px; cursor: pointer;
+  font-family: var(--fh); font-weight: 600; letter-spacing: 1px;
+  transition: all .15s; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.bsm { font-size: 11px; padding: 6px 12px; }
+.bmd { font-size: 13px; padding: 9px 18px; }
+.blg { font-size: 14px; padding: 12px 24px; }
+.bfull { width: 100%; }
+.bp  { background: var(--accent); color: #fff; }
+.bp:hover { background: var(--a2); }
+.bg  { background: var(--green); color: #fff; }
+.bg:hover { background: #16a34a; }
+.br  { background: var(--red); color: #fff; }
+.br:hover { background: #dc2626; }
+.bw  { background: var(--warn); color: #fff; }
+.bw:hover { background: #d97706; }
+.bgh { background: transparent; color: var(--t2); border: 1px solid var(--border); }
+.bgh:hover { background: var(--bg3); color: var(--text); }
+.bdanger { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+.bdanger:hover { background: rgba(239,68,68,0.2); }
+
+/* ================================================
+   MODALS
+================================================ */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 500px;
+  margin: 16px;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: translateY(16px);
+  transition: transform .2s;
+}
+.overlay.open .modal { transform: translateY(0); }
+.modal-wide { max-width: 700px; }
+
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+/* Form fields */
+.ig { margin-bottom: 14px; }
+.il { display: block; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--t2); margin-bottom: 6px; }
+.iif {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: var(--fh);
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+}
+.iif:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.iif::placeholder { color: var(--t3); }
+.iif option { background: var(--bg3); }
+textarea.iif { resize: vertical; min-height: 80px; }
+
+/* Status badges */
+.sbadge {
+  font-size: 10px; font-weight: 700; letter-spacing: .5px;
+  padding: 3px 8px; border-radius: 5px; text-transform: uppercase; font-family: var(--fm);
+}
+.s-active   { background: rgba(34,197,94,0.15);  color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+.s-paused   { background: rgba(245,158,11,0.15); color: var(--warn);   border: 1px solid rgba(245,158,11,0.3); }
+.s-done     { background: rgba(71,85,105,0.3);   color: var(--t3);     border: 1px solid var(--border); }
+.s-waiting  { background: rgba(148,163,184,0.1); color: var(--t2);     border: 1px solid var(--border); }
+.s-unassigned { background: rgba(239,68,68,0.1); color: var(--red);    border: 1px solid rgba(239,68,68,0.3); }
+.s-rejected { background: rgba(239,68,68,0.1);  color: var(--red);    border: 1px solid rgba(239,68,68,0.3); }
+.s-charging { background: rgba(168,85,247,0.15); color: var(--purple); border: 1px solid rgba(168,85,247,0.3); }
+.s-updating { background: rgba(59,130,246,0.15); color: var(--accent); border: 1px solid rgba(59,130,246,0.3); }
+
+/* Divider */
+.divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 20px; font-size: 13px; font-weight: 600;
+  transition: transform .25s; z-index: 200; white-space: nowrap;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ================================================
+   MOBILE NAV
+================================================ */
+#mobile-nav {
+  display: none;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mob-nav-row { display: flex; }
+.mnb {
+  flex: 1; padding: 10px 4px; background: none; border: none;
+  color: var(--t3); font-family: var(--fh); font-size: 10px; font-weight: 600;
+  letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color .15s; position: relative;
+}
+.mnb svg { width: 18px; height: 18px; }
+.mnb.active { color: var(--accent); }
+.mnb.active::after {
+  content: ''; position: absolute; top: 0; left: 20%; right: 20%;
+  height: 2px; background: var(--accent); border-radius: 2px;
+}
+
+.mob-panel { display: none; }
+
+@media (max-width: 768px) {
+  #topbar-tabs { display: none; }
+  #mobile-nav { display: block; }
+  .mob-panel { display: none; flex: 1; overflow-y: auto; padding: 14px 14px 80px; }
+  .mob-panel.active { display: block; }
+
+  #view-chef, #view-report, #view-templates, #view-notif {
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .col-left-chef, .col-right-chef, .col-left-tpl { display: none; }
+  .col-center-chef, .col-right-tpl { display: none; }
+  #view-chef.active, #view-report.active, #view-templates.active, #view-notif.active {
+    display: none;
+  }
+  #views { overflow: visible; }
+}
+
+@media (min-width: 769px) {
+  .col-left-chef, .col-center-chef, .col-right-chef { display: flex !important; }
+  .col-left-tpl, .col-right-tpl { display: flex !important; }
+}
+
+/* Spinner */
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Sound toggle */
+#sound-btn { font-size: 16px; line-height: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color .15s; }
+#sound-btn:hover { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="logo">Work<span>Prep</span> <span class="logo-badge">Klant</span></div>
+
+    <div id="topbar-tabs">
+      <button class="tab-btn active" onclick="switchView('chef')" id="tab-chef">Overzicht</button>
+      <button class="tab-btn" onclick="switchView('templates')" id="tab-templates">Templates</button>
+      <button class="tab-btn" onclick="switchView('report')" id="tab-report">Rapport</button>
+      <button class="tab-btn" onclick="switchView('notif')" id="tab-notif">
+        Notificaties <span id="tab-notif-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;border-radius:10px;padding:1px 5px;margin-left:2px;"></span>
+      </button>
+    </div>
+
+    <div id="topbar-right">
+      <button id="sound-btn" onclick="toggleSound()" title="Geluid aan/uit">🔔</button>
+      <div class="user-chip">
+        <span id="user-name">—</span>
+        <span class="user-chip-role" id="user-role-label">—</span>
+      </div>
+      <div class="btn-icon" onclick="doLogout()" title="Uitloggen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEWS -->
+  <div id="views">
+
+    <!-- ============ VIEW: CHEF OVERZICHT ============ -->
+    <div class="view active" id="view-chef">
+
+      <!-- Left: technician list -->
+      <div class="col col-left-chef">
+        <div class="col-header">
+          <div class="col-title">Techniekers</div>
+          <button class="btn bp bsm" onclick="openNewJob()">+ Job</button>
+        </div>
+        <div class="col-body" id="tech-list">
+          <div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12px;">Laden...</div>
+        </div>
+      </div>
+
+      <!-- Center: selected job detail -->
+      <div class="col col-center-chef">
+        <div class="col-header">
+          <div class="col-title" id="chef-job-title">Job detail</div>
+          <div id="chef-job-actions-top" style="display:none;gap:6px;display:flex;"></div>
+        </div>
+        <div style="position:relative;flex:1;overflow:hidden;">
+          <div id="chef-job-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:12px;opacity:.3;">
+              <rect x="2" y="7" width="20" height="14" rx="2"/>
+              <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+            </svg>
+            <p style="font-size:13px;">Selecteer een technieker of job</p>
+          </div>
+          <div id="chef-job-content" style="display:none;height:100%;overflow-y:auto;padding:16px;"></div>
+        </div>
+      </div>
+
+      <!-- Right: unassigned / rejected jobs -->
+      <div class="col col-right-chef">
+        <div class="col-header">
+          <div class="col-title">Niet-toegewezen</div>
+          <span id="unassigned-count" style="font-size:10px;font-family:var(--fm);background:rgba(239,68,68,0.15);color:var(--red);border-radius:5px;padding:2px 6px;display:none;"></span>
+        </div>
+        <div class="col-body" id="unassigned-list">
+          <div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12px;">Geen openstaande jobs</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ VIEW: TEMPLATES ============ -->
+    <div class="view" id="view-templates">
+
+      <!-- Left: template list -->
+      <div class="col col-left-tpl">
+        <div class="col-header">
+          <div class="col-title">Templates</div>
+          <button class="btn bp bsm" onclick="openNewTemplate()">+</button>
+        </div>
+        <div class="col-body" id="template-list">
+          <div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12px;">Laden...</div>
+        </div>
+      </div>
+
+      <!-- Right: template detail / editor -->
+      <div class="col col-right-tpl">
+        <div class="col-header">
+          <div class="col-title" id="tpl-detail-title">Selecteer een template</div>
+          <div id="tpl-detail-actions" style="display:flex;gap:6px;"></div>
+        </div>
+        <div class="col-body" id="tpl-detail-body">
+          <div style="text-align:center;padding:40px;color:var(--t3);font-size:12px;">Selecteer een template links</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ VIEW: RAPPORT ============ -->
+    <div class="view" id="view-report" style="flex-direction:column;">
+      <div class="report-toolbar">
+        <div class="rf">
+          <label class="rl">Van</label>
+          <input type="date" class="ri" id="r-from">
+        </div>
+        <div class="rf">
+          <label class="rl">Tot</label>
+          <input type="date" class="ri" id="r-to">
+        </div>
+        <div class="rf">
+          <label class="rl">Technieker</label>
+          <select class="ri" id="r-tech" style="min-width:160px;">
+            <option value="">Alle techniekers</option>
+          </select>
+        </div>
+        <div class="rf" style="margin-top:auto;">
+          <button class="btn bp bmd" onclick="loadReport()">Genereer</button>
+        </div>
+        <div class="rf" style="margin-top:auto;margin-left:auto;">
+          <button class="btn bgh bmd" onclick="exportExcel()" id="export-btn" disabled>↓ Excel</button>
+        </div>
+      </div>
+      <div id="report-body">
+        <div style="text-align:center;padding:60px;color:var(--t3);font-size:13px;">Stel een periode in en klik Genereer</div>
+      </div>
+    </div>
+
+    <!-- ============ VIEW: NOTIFICATIES ============ -->
+    <div class="view" id="view-notif" style="flex-direction:column;overflow-y:auto;">
+      <div class="col-header" style="flex-shrink:0;">
+        <div class="col-title">Notificaties</div>
+        <button class="btn bgh bsm" onclick="markAllRead()">Alles gelezen</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:12px;" id="notif-list">
+        <div style="text-align:center;padding:40px;color:var(--t3);font-size:12px;">Geen notificaties</div>
+      </div>
+    </div>
+
+  </div><!-- end #views -->
+
+  <!-- MOBILE NAV -->
+  <div id="mobile-nav">
+    <div class="mob-nav-row">
+      <button class="mnb active" id="mnb-chef" onclick="switchMobView('chef')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
+        Overzicht
+      </button>
+      <button class="mnb" id="mnb-templates" onclick="switchMobView('templates')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Templates
+      </button>
+      <button class="mnb" id="mnb-report" onclick="switchMobView('report')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Rapport
+      </button>
+      <button class="mnb" id="mnb-notif" onclick="switchMobView('notif')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Meldingen
+      </button>
+    </div>
+  </div>
+
+  <!-- MOBILE PANELS -->
+  <div class="mob-panel active" id="mob-chef"></div>
+  <div class="mob-panel" id="mob-templates"></div>
+  <div class="mob-panel" id="mob-report"></div>
+  <div class="mob-panel" id="mob-notif"></div>
+
+</div><!-- end #app -->
+
+<!-- ================================================
+     MODALS
+================================================ -->
+
+<!-- NEW JOB MODAL -->
+<div class="overlay" id="m-newjob">
+  <div class="modal">
+    <div class="modal-title">Nieuwe job aanmaken</div>
+    <div class="ig">
+      <label class="il">Workordernummer <span style="color:var(--red)">*</span></label>
+      <input type="text" class="iif" id="nj-wo" placeholder="WO-1234">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+      <div class="ig">
+        <label class="il">Merk</label>
+        <select class="iif" id="nj-brand" onchange="loadNjModels()">
+          <option value="">— Merk —</option>
+        </select>
+      </div>
+      <div class="ig">
+        <label class="il">Model</label>
+        <select class="iif" id="nj-model" onchange="loadNjVariants()">
+          <option value="">— Model —</option>
+        </select>
+      </div>
+      <div class="ig">
+        <label class="il">Variant</label>
+        <select class="iif" id="nj-variant">
+          <option value="">— Variant —</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="ig">
+        <label class="il">Chassisnummer</label>
+        <input type="text" class="iif" id="nj-vin" placeholder="VIN (optioneel)" style="text-transform:uppercase;">
+      </div>
+      <div class="ig">
+        <label class="il">Nummerplaat</label>
+        <input type="text" class="iif" id="nj-plate" placeholder="1-ABC-123">
+      </div>
+    </div>
+    <div class="ig">
+      <label class="il">Toewijzen aan <span style="color:var(--red)">*</span></label>
+      <select class="iif" id="nj-tech">
+        <option value="">— Selecteer technieker —</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn bgh bmd" onclick="closeModal('m-newjob')">Annuleren</button>
+      <button class="btn bp bmd" onclick="saveNewJob()">Job aanmaken & versturen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD NOTE MODAL -->
+<div class="overlay" id="m-note">
+  <div class="modal">
+    <div class="modal-title">Notitie toevoegen</div>
+    <div class="ig">
+      <label class="il">Notitie</label>
+      <textarea class="iif" id="note-text" placeholder="Bv. Onderdelen komen na de middag aan..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn bgh bmd" onclick="closeModal('m-note')">Annuleren</button>
+      <button class="btn bp bmd" onclick="saveNote()">Versturen naar technieker</button>
+    </div>
+  </div>
+</div>
+
+<!-- REASSIGN MODAL -->
+<div class="overlay" id="m-reassign">
+  <div class="modal">
+    <div class="modal-title">Job hertoewijzen</div>
+    <div class="ig">
+      <label class="il">Toewijzen aan</label>
+      <select class="iif" id="reassign-tech">
+        <option value="">— Selecteer technieker —</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn bgh bmd" onclick="closeModal('m-reassign')">Annuleren</button>
+      <button class="btn bp bmd" onclick="saveReassign()">Hertoewijzen</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW TEMPLATE MODAL -->
+<div class="overlay" id="m-newtpl">
+  <div class="modal modal-wide">
+    <div class="modal-title" id="newtpl-title">Nieuwe template</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="ig" style="grid-column:1/-1;">
+        <label class="il">Naam <span style="color:var(--red)">*</span></label>
+        <input type="text" class="iif" id="tpl-name" placeholder="Bv. Banden wisselen — winter">
+      </div>
+      <div class="ig">
+        <label class="il">Merk (optioneel)</label>
+        <select class="iif" id="tpl-brand" onchange="loadTplModels()">
+          <option value="">Alle merken (generisch)</option>
+        </select>
+      </div>
+      <div class="ig">
+        <label class="il">Model</label>
+        <select class="iif" id="tpl-model" onchange="loadTplVariants()">
+          <option value="">Alle modellen</option>
+        </select>
+      </div>
+      <div class="ig">
+        <label class="il">Variant</label>
+        <select class="iif" id="tpl-variant">
+          <option value="">Alle varianten</option>
+        </select>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:700;color:var(--t2);">Taken</div>
+      <button class="btn bgh bsm" onclick="addTplTaskRow()">+ Taak toevoegen</button>
+    </div>
+    <div id="tpl-tasks-editor"></div>
+    <div class="modal-actions">
+      <button class="btn bgh bmd" onclick="closeModal('m-newtpl')">Annuleren</button>
+      <button class="btn bp bmd" onclick="saveTemplate()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ================================================
+// SUPABASE
+// ================================================
+const SUPABASE_URL = 'https://tiavzsywbiwajvxknqof.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_aunpvg532iEoEbvOJ08-DA_XOR1rQU4';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ================================================
+// STATE
+// ================================================
+const S = {
+  user: null,
+  userRole: null,
+  customerId: null,
+  technicians: [],   // users who are technicians for this customer
+  jobs: [],          // all jobs for today
+  workDays: [],      // today's work_days for this customer
+  templates: [],
+  brands: [],
+  selectedJobId: null,
+  selectedTechId: null,
+  selectedTplId: null,
+  editTplId: null,
+  noteJobId: null,
+  reassignJobId: null,
+  notifications: [],
+  unreadCount: 0,
+  soundOn: true,
+  tplTaskRows: [],   // rows in the template task editor
+};
+
+// ================================================
+// INIT
+// ================================================
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'workprep-login.html'; return; }
+
+  const { data: userData } = await sb.from('users')
+    .select('id, full_name, organization_id')
+    .eq('id', session.user.id)
+    .single();
+  if (!userData) { window.location.href = 'workprep-login.html'; return; }
+
+  S.user = userData;
+
+  const { data: roleData } = await sb.from('user_roles')
+    .select('role, customer_id')
+    .eq('user_id', session.user.id)
+    .in('role', ['customer_admin', 'customer_accountant'])
+    .maybeSingle();
+
+  if (!roleData) {
+    // No customer role — redirect to technician app
+    window.location.href = 'workprep-app.html';
+    return;
+  }
+
+  S.userRole = roleData.role;
+  S.customerId = roleData.customer_id;
+
+  document.getElementById('user-name').textContent = userData.full_name;
+  document.getElementById('user-role-label').textContent =
+    S.userRole === 'customer_admin' ? 'Chef' : 'Boekhoudster';
+
+  // Accountant: only show report view
+  if (S.userRole === 'customer_accountant') {
+    document.getElementById('tab-chef').style.display = 'none';
+    document.getElementById('tab-templates').style.display = 'none';
+    document.getElementById('tab-notif').style.display = 'none';
+    switchView('report');
+  }
+
+  await Promise.all([
+    loadBrands(),
+    loadTechnicians(),
+    loadTemplates(),
+    loadNotifications(),
+  ]);
+
+  await loadTodayJobs();
+  renderChefView();
+  renderTemplateList();
+  setupRealtime();
+  setupReportDefaults();
+}
+
+// ================================================
+// LOAD DATA
+// ================================================
+async function loadBrands() {
+  const { data } = await sb.from('brands').select('id, name').order('name');
+  S.brands = data || [];
+  populateBrandSelects();
+}
+
+function populateBrandSelects() {
+  const selects = ['nj-brand', 'tpl-brand'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = `<option value="">${id === 'tpl-brand' ? 'Alle merken (generisch)' : '— Merk —'}</option>` +
+      S.brands.map(b => `<option value="${b.id}">${escHtml(b.name)}</option>`).join('');
+  });
+}
+
+async function loadTechnicians() {
+  // Get all work_days for this customer today, then get the users
+  const today = new Date().toISOString().split('T')[0];
+  const { data: wds } = await sb.from('work_days')
+    .select('user_id, users(id, full_name)')
+    .eq('customer_id', S.customerId)
+    .eq('date', today);
+
+  // Unique technicians by user_id
+  const seen = new Set();
+  S.technicians = [];
+  (wds || []).forEach(wd => {
+    if (!seen.has(wd.user_id) && wd.users) {
+      seen.add(wd.user_id);
+      S.technicians.push(wd.users);
+    }
+  });
+
+  // Populate tech dropdowns
+  ['nj-tech', 'reassign-tech', 'r-tech'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const placeholder = id === 'r-tech' ? 'Alle techniekers' : '— Selecteer technieker —';
+    el.innerHTML = `<option value="">${placeholder}</option>` +
+      S.technicians.map(t => `<option value="${t.id}">${escHtml(t.full_name)}</option>`).join('');
+  });
+}
+
+async function loadTodayJobs() {
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data: wds } = await sb.from('work_days')
+    .select('id, user_id, date')
+    .eq('customer_id', S.customerId)
+    .eq('date', today);
+  S.workDays = wds || [];
+
+  if (!S.workDays.length) { S.jobs = []; return; }
+  const wdIds = S.workDays.map(w => w.id);
+
+  const { data: jobs } = await sb.from('jobs')
+    .select(`
+      id, work_day_id, user_id, status, work_order, vin, license_plate,
+      rejection_reason, notes,
+      brand_id, model_id, variant_id,
+      brands(name), models(name), variants(name),
+      job_tasks(id, label, category, is_checked, order_index)
+    `)
+    .in('work_day_id', wdIds)
+    .order('created_at');
+
+  S.jobs = (jobs || []).map(j => ({
+    ...j,
+    _workDay: S.workDays.find(w => w.id === j.work_day_id),
+  }));
+}
+
+async function loadTemplates() {
+  const { data } = await sb.from('job_templates')
+    .select(`id, name, customer_id, variant_id, brands(name), models(name), variants(name),
+      job_template_tasks(id, label, category, task_type, order_index, estimated_duration_min, is_required)`)
+    .or(`customer_id.eq.${S.customerId},customer_id.is.null`)
+    .order('name');
+  S.templates = data || [];
+}
+
+async function loadNotifications() {
+  const { data } = await sb.from('notifications')
+    .select('id, type, message, sent_at, read_at, job_id')
+    .eq('user_id', S.user.id)
+    .order('sent_at', { ascending: false })
+    .limit(50);
+  S.notifications = data || [];
+  updateUnreadBadge();
+  renderNotifList();
+}
+
+// ================================================
+// REALTIME
+// ================================================
+function setupRealtime() {
+  // Listen for new notifications for this user
+  sb.channel('customer-notifs')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'notifications',
+      filter: `user_id=eq.${S.user.id}`,
+    }, payload => {
+      S.notifications.unshift(payload.new);
+      updateUnreadBadge();
+      renderNotifList();
+      playNotifSound();
+    })
+    .subscribe();
+
+  // Listen for job updates
+  sb.channel('customer-jobs')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'jobs',
+    }, async () => {
+      await loadTodayJobs();
+      renderChefView();
+      if (S.selectedJobId) renderChefJobDetail(S.selectedJobId);
+    })
+    .subscribe();
+}
+
+// ================================================
+// RENDER CHEF VIEW
+// ================================================
+function renderChefView() {
+  renderTechList();
+  renderUnassignedList();
+}
+
+function renderTechList() {
+  const el = document.getElementById('tech-list');
+  if (!S.workDays.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12px;">Geen actieve werkdagen vandaag</div>';
+    return;
+  }
+
+  let html = '';
+  S.technicians.forEach(tech => {
+    const techJobs = S.jobs.filter(j => j.user_id === tech.id &&
+      !['unassigned', 'rejected'].includes(j.status));
+    const active = techJobs.find(j => j.status === 'active');
+    const done = techJobs.filter(j => j.status === 'done').length;
+
+    const pillsHtml = techJobs.slice(0, 3).map(j => {
+      const car = [j.brands?.name, j.models?.name].filter(Boolean).join(' ') || 'Onbekend';
+      return `<div class="job-pill s-${j.status}" onclick="selectJob('${j.id}');event.stopPropagation()">
+        ${j.work_order ? j.work_order + ' · ' : ''}${escHtml(car)}
+      </div>`;
+    }).join('');
+
+    html += `<div class="tech-card ${S.selectedTechId === tech.id ? 'selected' : ''}"
+      onclick="selectTech('${tech.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="tech-name">${escHtml(tech.full_name)}</div>
+        <div style="font-size:10px;font-family:var(--fm);color:var(--t3);">${done}/${techJobs.length} klaar</div>
+      </div>
+      <div class="tech-jobs">${active ? 'Bezig: ' + (active.brands?.name || '?') + ' ' + (active.models?.name || '') : 'Geen actieve job'}</div>
+      <div>${pillsHtml}</div>
+    </div>`;
+  });
+
+  if (!html) html = '<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12px;">Geen techniekers aanwezig</div>';
+  el.innerHTML = html;
+}
+
+function renderUnassignedList() {
+  const el = document.getElementById('unassigned-list');
+  const badge = document.getElementById('unassigned-count');
+  const jobs = S.jobs.filter(j => ['unassigned', 'rejected'].includes(j.status));
+
+  if (!jobs.length) {
+    badge.style.display = 'none';
+    el.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12px;">Geen openstaande jobs</div>';
+    return;
+  }
+
+  badge.style.display = 'inline';
+  badge.textContent = jobs.length;
+
+  el.innerHTML = jobs.map(j => {
+    const car = [j.brands?.name, j.models?.name, j.variants?.name].filter(Boolean).join(' ') || 'Onbekend voertuig';
+    const tech = S.technicians.find(t => t.id === j.user_id);
+    return `<div class="unassigned-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="unassigned-wo">${j.work_order || 'Geen WO'}</div>
+          <div class="unassigned-car">${escHtml(car)}</div>
+          ${tech ? `<div style="font-size:10px;color:var(--t3);margin-top:2px;">Origineel: ${escHtml(tech.full_name)}</div>` : ''}
+        </div>
+        <span class="sbadge s-${j.status}">${j.status === 'rejected' ? 'Geweigerd' : 'Niet-toegewezen'}</span>
+      </div>
+      ${j.rejection_reason ? `<div class="unassigned-reason">"${escHtml(j.rejection_reason)}"</div>` : ''}
+      <div style="margin-top:8px;">
+        <button class="btn bp bsm" onclick="openReassign('${j.id}')">Hertoewijzen</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectTech(techId) {
+  S.selectedTechId = techId;
+  S.selectedJobId = null;
+  renderTechList();
+  // Show first job for this tech
+  const first = S.jobs.find(j => j.user_id === techId && !['unassigned','rejected'].includes(j.status));
+  if (first) renderChefJobDetail(first.id);
+  else {
+    document.getElementById('chef-job-empty').style.display = 'flex';
+    document.getElementById('chef-job-content').style.display = 'none';
+    document.getElementById('chef-job-title').textContent = 'Job detail';
+  }
+}
+
+function selectJob(jobId) {
+  S.selectedJobId = jobId;
+  renderChefJobDetail(jobId);
+}
+
+function renderChefJobDetail(jobId) {
+  S.selectedJobId = jobId;
+  const job = S.jobs.find(j => j.id === jobId);
+  if (!job) return;
+
+  const empty  = document.getElementById('chef-job-empty');
+  const content = document.getElementById('chef-job-content');
+  empty.style.display = 'none';
+  content.style.display = 'block';
+
+  const car = [job.brands?.name, job.models?.name, job.variants?.name].filter(Boolean).join(' · ') || 'Onbekend voertuig';
+  document.getElementById('chef-job-title').textContent = job.work_order || car;
+
+  // Group tasks by category
+  const tasks = (job.job_tasks || []).sort((a,b) => a.order_index - b.order_index);
+  const cats = {};
+  tasks.forEach(t => { if (!cats[t.category]) cats[t.category] = []; cats[t.category].push(t); });
+
+  const tasksHtml = Object.entries(cats).map(([cat, ts]) => {
+    const done = ts.filter(t => t.is_checked).length;
+    return `<div class="task-section">
+      <div class="task-cat"><span>${escHtml(cat)}</span><span style="color:var(--t3)">${done}/${ts.length}</span></div>
+      ${ts.map(t => `<div class="task-item ${t.is_checked ? 'checked' : ''}">
+        <div class="task-check">${t.is_checked ? `<svg width="10" height="8" viewBox="0 0 12 10" fill="none"><polyline points="1 5 4.5 8.5 11 1" stroke="white" stroke-width="2"/></svg>` : ''}</div>
+        <div class="task-label">${escHtml(t.label)}</div>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+
+  const notesHtml = job.notes ? `<div class="note-box">
+    <div class="note-ts">Notitie</div>
+    <div class="note-text">${escHtml(job.notes)}</div>
+  </div>` : '';
+
+  const totalTasks = tasks.length;
+  const doneTasks  = tasks.filter(t => t.is_checked).length;
+
+  content.innerHTML = `
+    <div class="cjob-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="cjob-title">${escHtml(car)}</div>
+          <div class="cjob-meta">
+            ${job.work_order ? 'WO: ' + job.work_order + ' · ' : ''}
+            ${job.vin ? 'VIN: ' + job.vin + ' · ' : ''}
+            ${job.license_plate ? job.license_plate : ''}
+          </div>
+        </div>
+        <span class="sbadge s-${job.status}">${statusLabel(job.status)}</span>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--t2);">
+        Taken: <span style="color:var(--text);font-family:var(--fm);">${doneTasks}/${totalTasks}</span>
+        ${totalTasks ? `<div style="height:3px;background:var(--bg3);border-radius:2px;margin-top:6px;overflow:hidden;">
+          <div style="height:100%;background:var(--green);width:${Math.round(doneTasks/totalTasks*100)}%;"></div>
+        </div>` : ''}
+      </div>
+      <div class="cjob-actions" style="margin-top:12px;">
+        <button class="btn bp bsm" onclick="openNoteModal('${jobId}')">💬 Notitie sturen</button>
+        <button class="btn bgh bsm" onclick="openReassign('${jobId}')">↩ Hertoewijzen</button>
+      </div>
+    </div>
+    ${notesHtml}
+    ${tasksHtml || '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Geen taken</div>'}
+  `;
+}
+
+// ================================================
+// NEW JOB
+// ================================================
+async function openNewJob() {
+  document.getElementById('nj-wo').value = '';
+  document.getElementById('nj-vin').value = '';
+  document.getElementById('nj-plate').value = '';
+  document.getElementById('nj-brand').value = '';
+  document.getElementById('nj-model').innerHTML = '<option value="">— Model —</option>';
+  document.getElementById('nj-variant').innerHTML = '<option value="">— Variant —</option>';
+  document.getElementById('nj-tech').value = '';
+  openModal('m-newjob');
+}
+
+async function loadNjModels() {
+  const brandId = document.getElementById('nj-brand').value;
+  const el = document.getElementById('nj-model');
+  el.innerHTML = '<option value="">— Model —</option>';
+  document.getElementById('nj-variant').innerHTML = '<option value="">— Variant —</option>';
+  if (!brandId) return;
+  const { data } = await sb.from('models').select('id, name').eq('brand_id', brandId).order('name');
+  el.innerHTML += (data || []).map(m => `<option value="${m.id}">${escHtml(m.name)}</option>`).join('');
+}
+
+async function loadNjVariants() {
+  const modelId = document.getElementById('nj-model').value;
+  const el = document.getElementById('nj-variant');
+  el.innerHTML = '<option value="">— Variant —</option>';
+  if (!modelId) return;
+  const { data } = await sb.from('variants').select('id, name').eq('model_id', modelId).order('name');
+  el.innerHTML += (data || []).map(v => `<option value="${v.id}">${escHtml(v.name)}</option>`).join('');
+}
+
+async function saveNewJob() {
+  const wo     = document.getElementById('nj-wo').value.trim();
+  const techId = document.getElementById('nj-tech').value;
+  if (!wo)     { toast('Workordernummer is verplicht'); return; }
+  if (!techId) { toast('Selecteer een technieker'); return; }
+
+  const brandId   = document.getElementById('nj-brand').value   || null;
+  const modelId   = document.getElementById('nj-model').value   || null;
+  const variantId = document.getElementById('nj-variant').value || null;
+  const vin       = document.getElementById('nj-vin').value.trim().toUpperCase() || null;
+  const plate     = document.getElementById('nj-plate').value.trim() || null;
+
+  // Find the work_day for this technician today
+  const wd = S.workDays.find(w => w.user_id === techId);
+  if (!wd) { toast('Technieker heeft nog geen werkdag gestart vandaag'); return; }
+
+  const { data: job, error } = await sb.from('jobs').insert({
+    work_day_id:   wd.id,
+    customer_id:   S.customerId,
+    user_id:       techId,
+    work_order:    wo,
+    brand_id:      brandId,
+    model_id:      modelId,
+    variant_id:    variantId,
+    vin,
+    license_plate: plate,
+    status:        'waiting',
+  }).select('id').single();
+
+  if (error) { toast('Fout: ' + error.message); return; }
+
+  // Send notification to technician
+  const tech = S.technicians.find(t => t.id === techId);
+  const car = [brandId && S.brands.find(b => b.id === brandId)?.name].filter(Boolean).join(' ');
+  await sb.from('notifications').insert({
+    user_id: techId,
+    job_id:  job.id,
+    type:    'new_job',
+    message: `Nieuwe job: ${wo}${car ? ' · ' + car : ''}`,
+  });
+
+  closeModal('m-newjob');
+  toast('Job aangemaakt & technieker verwittigd ✓');
+  await loadTodayJobs();
+  renderChefView();
+}
+
+// ================================================
+// NOTE
+// ================================================
+function openNoteModal(jobId) {
+  S.noteJobId = jobId;
+  document.getElementById('note-text').value = '';
+  openModal('m-note');
+}
+
+async function saveNote() {
+  const text = document.getElementById('note-text').value.trim();
+  if (!text) { toast('Notitie mag niet leeg zijn'); return; }
+
+  const job = S.jobs.find(j => j.id === S.noteJobId);
+  if (!job) return;
+
+  // Save note on job
+  await sb.from('jobs').update({ notes: text }).eq('id', S.noteJobId);
+
+  // Notify technician
+  await sb.from('notifications').insert({
+    user_id: job.user_id,
+    job_id:  S.noteJobId,
+    type:    'note',
+    message: `📋 Notitie: ${text}`,
+  });
+
+  closeModal('m-note');
+  toast('Notitie verstuurd ✓');
+  await loadTodayJobs();
+  if (S.selectedJobId === S.noteJobId) renderChefJobDetail(S.noteJobId);
+}
+
+// ================================================
+// REASSIGN
+// ================================================
+function openReassign(jobId) {
+  S.reassignJobId = jobId;
+  document.getElementById('reassign-tech').value = '';
+  openModal('m-reassign');
+}
+
+async function saveReassign() {
+  const techId = document.getElementById('reassign-tech').value;
+  if (!techId) { toast('Selecteer een technieker'); return; }
+
+  const wd = S.workDays.find(w => w.user_id === techId);
+  if (!wd) { toast('Technieker heeft nog geen werkdag gestart vandaag'); return; }
+
+  const job = S.jobs.find(j => j.id === S.reassignJobId);
+  await sb.from('jobs').update({
+    user_id:          techId,
+    work_day_id:      wd.id,
+    status:           'waiting',
+    rejection_reason: null,
+  }).eq('id', S.reassignJobId);
+
+  // Notify new technician
+  await sb.from('notifications').insert({
+    user_id: techId,
+    job_id:  S.reassignJobId,
+    type:    'new_job',
+    message: `Hertoegewezen job: ${job?.work_order || ''}`,
+  });
+
+  closeModal('m-reassign');
+  toast('Job hertoegewezen ✓');
+  await loadTodayJobs();
+  renderChefView();
+}
+
+// ================================================
+// TEMPLATES
+// ================================================
+function renderTemplateList() {
+  const el = document.getElementById('template-list');
+  if (!S.templates.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12px;">Geen templates</div>';
+    return;
+  }
+  el.innerHTML = S.templates.map(t => {
+    const scope = t.variants?.name || t.models?.name || t.brands?.name || 'Generisch';
+    return `<div class="tpl-card ${S.selectedTplId === t.id ? 'selected' : ''}" onclick="selectTemplate('${t.id}')">
+      <div class="tpl-name">${escHtml(t.name)}</div>
+      <div class="tpl-meta">${escHtml(scope)} · ${(t.job_template_tasks || []).length} taken</div>
+    </div>`;
+  }).join('');
+}
+
+function selectTemplate(tplId) {
+  S.selectedTplId = tplId;
+  renderTemplateList();
+  renderTemplateDetail(tplId);
+}
+
+function renderTemplateDetail(tplId) {
+  const tpl = S.templates.find(t => t.id === tplId);
+  if (!tpl) return;
+
+  document.getElementById('tpl-detail-title').textContent = tpl.name;
+  document.getElementById('tpl-detail-actions').innerHTML = `
+    <button class="btn bgh bsm" onclick="openEditTemplate('${tplId}')">✏️ Bewerken</button>
+    <button class="btn bdanger bsm" onclick="deleteTemplate('${tplId}')">Verwijderen</button>
+  `;
+
+  const tasks = (tpl.job_template_tasks || []).sort((a,b) => a.order_index - b.order_index);
+  const scope = [tpl.brands?.name, tpl.models?.name, tpl.variants?.name].filter(Boolean).join(' › ') || 'Generisch (alle voertuigen)';
+
+  document.getElementById('tpl-detail-body').innerHTML = `
+    <div style="font-size:11px;color:var(--t3);font-family:var(--fm);margin-bottom:14px;">${escHtml(scope)}</div>
+    ${tasks.map((t, i) => `
+      <div class="tpl-task-row">
+        <div class="tpl-task-idx">${i + 1}</div>
+        <div class="tpl-task-info">
+          <div class="tpl-task-label">${escHtml(t.label)}</div>
+          <div class="tpl-task-cat">${escHtml(t.category)}</div>
+        </div>
+        <div class="tpl-task-type">${t.task_type}</div>
+        ${t.estimated_duration_min ? `<div style="font-size:10px;color:var(--t3);font-family:var(--fm);">${t.estimated_duration_min}min</div>` : ''}
+        ${t.is_required ? `<div style="font-size:10px;color:var(--red);">verplicht</div>` : ''}
+      </div>
+    `).join('') || '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Geen taken in deze template</div>'}
+  `;
+}
+
+function openNewTemplate() {
+  S.editTplId = null;
+  S.tplTaskRows = [];
+  document.getElementById('newtpl-title').textContent = 'Nieuwe template';
+  document.getElementById('tpl-name').value = '';
+  document.getElementById('tpl-brand').value = '';
+  document.getElementById('tpl-model').innerHTML = '<option value="">Alle modellen</option>';
+  document.getElementById('tpl-variant').innerHTML = '<option value="">Alle varianten</option>';
+  document.getElementById('tpl-tasks-editor').innerHTML = '';
+  openModal('m-newtpl');
+}
+
+function openEditTemplate(tplId) {
+  const tpl = S.templates.find(t => t.id === tplId);
+  if (!tpl) return;
+  S.editTplId = tplId;
+  S.tplTaskRows = (tpl.job_template_tasks || [])
+    .sort((a,b) => a.order_index - b.order_index)
+    .map(t => ({ id: t.id, label: t.label, category: t.category, task_type: t.task_type,
+      order_index: t.order_index, estimated_duration_min: t.estimated_duration_min || '',
+      is_required: t.is_required || false }));
+
+  document.getElementById('newtpl-title').textContent = 'Template bewerken';
+  document.getElementById('tpl-name').value = tpl.name;
+  renderTplTaskEditor();
+  openModal('m-newtpl');
+}
+
+function addTplTaskRow() {
+  S.tplTaskRows.push({ label: '', category: 'Algemeen', task_type: 'checkbox',
+    order_index: S.tplTaskRows.length, estimated_duration_min: '', is_required: false });
+  renderTplTaskEditor();
+}
+
+function removeTplTaskRow(idx) {
+  S.tplTaskRows.splice(idx, 1);
+  renderTplTaskEditor();
+}
+
+function updateTplTaskField(idx, field, value) {
+  S.tplTaskRows[idx][field] = value;
+}
+
+function renderTplTaskEditor() {
+  const el = document.getElementById('tpl-tasks-editor');
+  if (!S.tplTaskRows.length) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--t3);font-size:12px;">Nog geen taken · klik "+ Taak toevoegen"</div>';
+    return;
+  }
+  el.innerHTML = S.tplTaskRows.map((t, i) => `
+    <div style="display:grid;grid-template-columns:1fr 120px 120px 60px 80px 30px;gap:6px;margin-bottom:8px;align-items:center;">
+      <input class="iif" style="padding:7px 10px;font-size:12px;" placeholder="Omschrijving taak"
+        value="${escHtml(t.label)}" oninput="updateTplTaskField(${i},'label',this.value)">
+      <input class="iif" style="padding:7px 10px;font-size:12px;" placeholder="Categorie"
+        value="${escHtml(t.category)}" oninput="updateTplTaskField(${i},'category',this.value)">
+      <select class="iif" style="padding:7px 10px;font-size:12px;" onchange="updateTplTaskField(${i},'task_type',this.value)">
+        <option value="checkbox" ${t.task_type==='checkbox'?'selected':''}>checkbox</option>
+        <option value="data_field" ${t.task_type==='data_field'?'selected':''}>data_field</option>
+        <option value="waiting" ${t.task_type==='waiting'?'selected':''}>waiting</option>
+      </select>
+      <input class="iif" style="padding:7px 10px;font-size:12px;" placeholder="min"
+        type="number" value="${t.estimated_duration_min}"
+        oninput="updateTplTaskField(${i},'estimated_duration_min',this.value)">
+      <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2);cursor:pointer;">
+        <input type="checkbox" ${t.is_required?'checked':''} onchange="updateTplTaskField(${i},'is_required',this.checked)">
+        verplicht
+      </label>
+      <button class="btn bdanger bsm" style="padding:6px 8px;" onclick="removeTplTaskRow(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+async function loadTplModels() {
+  const brandId = document.getElementById('tpl-brand').value;
+  const el = document.getElementById('tpl-model');
+  el.innerHTML = '<option value="">Alle modellen</option>';
+  document.getElementById('tpl-variant').innerHTML = '<option value="">Alle varianten</option>';
+  if (!brandId) return;
+  const { data } = await sb.from('models').select('id, name').eq('brand_id', brandId).order('name');
+  el.innerHTML += (data || []).map(m => `<option value="${m.id}">${escHtml(m.name)}</option>`).join('');
+}
+
+async function loadTplVariants() {
+  const modelId = document.getElementById('tpl-model').value;
+  const el = document.getElementById('tpl-variant');
+  el.innerHTML = '<option value="">Alle varianten</option>';
+  if (!modelId) return;
+  const { data } = await sb.from('variants').select('id, name').eq('model_id', modelId).order('name');
+  el.innerHTML += (data || []).map(v => `<option value="${v.id}">${escHtml(v.name)}</option>`).join('');
+}
+
+async function saveTemplate() {
+  const name = document.getElementById('tpl-name').value.trim();
+  if (!name) { toast('Geef de template een naam'); return; }
+
+  const variantId = document.getElementById('tpl-variant').value || null;
+  const modelId   = document.getElementById('tpl-model').value   || null;
+  const brandId   = document.getElementById('tpl-brand').value   || null;
+
+  let tplId = S.editTplId;
+
+  if (tplId) {
+    await sb.from('job_templates').update({ name, variant_id: variantId }).eq('id', tplId);
+    await sb.from('job_template_tasks').delete().eq('template_id', tplId);
+  } else {
+    const { data, error } = await sb.from('job_templates').insert({
+      name,
+      customer_id: S.customerId,
+      variant_id:  variantId,
+    }).select('id').single();
+    if (error) { toast('Fout: ' + error.message); return; }
+    tplId = data.id;
+  }
+
+  if (S.tplTaskRows.length) {
+    const rows = S.tplTaskRows.map((t, i) => ({
+      template_id:           tplId,
+      label:                 t.label || 'Taak',
+      category:              t.category || 'Algemeen',
+      task_type:             t.task_type,
+      order_index:           i,
+      estimated_duration_min: parseInt(t.estimated_duration_min) || null,
+      is_required:           t.is_required,
+    }));
+    await sb.from('job_template_tasks').insert(rows);
+  }
+
+  closeModal('m-newtpl');
+  toast(S.editTplId ? 'Template bijgewerkt ✓' : 'Template aangemaakt ✓');
+  await loadTemplates();
+  renderTemplateList();
+  if (S.selectedTplId === tplId) renderTemplateDetail(tplId);
+}
+
+async function deleteTemplate(tplId) {
+  if (!confirm('Template verwijderen?')) return;
+  await sb.from('job_template_tasks').delete().eq('template_id', tplId);
+  await sb.from('job_templates').delete().eq('id', tplId);
+  S.selectedTplId = null;
+  document.getElementById('tpl-detail-title').textContent = 'Selecteer een template';
+  document.getElementById('tpl-detail-actions').innerHTML = '';
+  document.getElementById('tpl-detail-body').innerHTML = '<div style="text-align:center;padding:40px;color:var(--t3);font-size:12px;">Selecteer een template links</div>';
+  toast('Template verwijderd');
+  await loadTemplates();
+  renderTemplateList();
+}
+
+// ================================================
+// RAPPORT
+// ================================================
+function setupReportDefaults() {
+  const now  = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  document.getElementById('r-from').value = from.toISOString().split('T')[0];
+  document.getElementById('r-to').value   = now.toISOString().split('T')[0];
+}
+
+let reportData = [];
+
+async function loadReport() {
+  const from  = document.getElementById('r-from').value;
+  const to    = document.getElementById('r-to').value;
+  const techId = document.getElementById('r-tech').value;
+
+  if (!from || !to) { toast('Stel een periode in'); return; }
+
+  const body = document.getElementById('report-body');
+  body.innerHTML = '<div style="text-align:center;padding:60px;color:var(--t3);">Laden...</div>';
+  document.getElementById('export-btn').disabled = true;
+
+  // Get work_days in period for this customer
+  let wdQuery = sb.from('work_days')
+    .select('id, user_id, date, users(id, full_name)')
+    .eq('customer_id', S.customerId)
+    .gte('date', from)
+    .lte('date', to)
+    .order('date');
+  if (techId) wdQuery = wdQuery.eq('user_id', techId);
+  const { data: wds } = await wdQuery;
+  if (!wds?.length) {
+    body.innerHTML = '<div style="text-align:center;padding:60px;color:var(--t3);font-size:13px;">Geen data gevonden voor deze periode</div>';
+    return;
+  }
+
+  const wdIds = wds.map(w => w.id);
+
+  // Get jobs with vehicle info
+  const { data: jobs } = await sb.from('jobs')
+    .select('id, work_day_id, work_order, vin, license_plate, brands(name), models(name), variants(name)')
+    .in('work_day_id', wdIds)
+    .neq('status', 'rejected');
+  if (!jobs?.length) {
+    body.innerHTML = '<div style="text-align:center;padding:60px;color:var(--t3);font-size:13px;">Geen jobs gevonden</div>';
+    return;
+  }
+
+  const jobIds = jobs.map(j => j.id);
+  const jobMap = Object.fromEntries(jobs.map(j => [j.id, j]));
+  const wdMap  = Object.fromEntries(wds.map(w => [w.id, w]));
+
+  // Get work sessions (only 'work' type)
+  const { data: sessions } = await sb.from('work_sessions')
+    .select('job_id, duration_min, session_type')
+    .in('job_id', jobIds)
+    .eq('session_type', 'work');
+
+  // Sum duration per job
+  const durationMap = {};
+  (sessions || []).forEach(s => {
+    durationMap[s.job_id] = (durationMap[s.job_id] || 0) + (s.duration_min || 0);
+  });
+
+  // Build rows
+  reportData = jobs.map(j => {
+    const wd   = wdMap[j.work_day_id];
+    const tech = wd?.users;
+    return {
+      date:     wd?.date || '',
+      tech:     tech?.full_name || '—',
+      tech_id:  wd?.user_id,
+      wo:       j.work_order || '—',
+      brand:    j.brands?.name || '—',
+      model:    j.models?.name || '—',
+      variant:  j.variants?.name || '—',
+      vin:      j.vin || '—',
+      plate:    j.license_plate || '—',
+      duration: durationMap[j.id] || 0,
+    };
+  }).sort((a,b) => a.tech.localeCompare(b.tech) || a.date.localeCompare(b.date));
+
+  renderReportTable();
+}
+
+function renderReportTable() {
+  if (!reportData.length) return;
+  document.getElementById('export-btn').disabled = false;
+
+  // Group by technician for subtotals
+  const byTech = {};
+  reportData.forEach(r => {
+    if (!byTech[r.tech]) byTech[r.tech] = [];
+    byTech[r.tech].push(r);
+  });
+
+  let html = `<table class="report-table">
+    <thead><tr>
+      <th>Datum</th><th>Technieker</th><th>Workorder</th>
+      <th>Merk</th><th>Model</th><th>Variant</th>
+      <th>Chassisnummer</th><th>Nummerplaat</th><th>Werktijd</th>
+    </tr></thead><tbody>`;
+
+  let grandTotal = 0;
+
+  Object.entries(byTech).forEach(([tech, rows]) => {
+    const subtotal = rows.reduce((s, r) => s + r.duration, 0);
+    grandTotal += subtotal;
+    rows.forEach(r => {
+      html += `<tr>
+        <td>${r.date}</td><td>${escHtml(r.tech)}</td><td>${escHtml(r.wo)}</td>
+        <td>${escHtml(r.brand)}</td><td>${escHtml(r.model)}</td><td>${escHtml(r.variant)}</td>
+        <td>${escHtml(r.vin)}</td><td>${escHtml(r.plate)}</td><td>${fmtDuration(r.duration)}</td>
+      </tr>`;
+    });
+    html += `<tr class="subtotal">
+      <td colspan="8" style="text-align:right;">Subtotaal ${escHtml(tech)}</td>
+      <td>${fmtDuration(subtotal)}</td>
+    </tr>`;
+  });
+
+  html += `<tr class="grandtotal">
+    <td colspan="8" style="text-align:right;">Eindtotaal</td>
+    <td>${fmtDuration(grandTotal)}</td>
+  </tr></tbody></table>`;
+
+  document.getElementById('report-body').innerHTML = html;
+}
+
+function fmtDuration(min) {
+  if (!min) return '0u00';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${h}u${String(m).padStart(2, '0')}`;
+}
+
+function exportExcel() {
+  if (!reportData.length) return;
+  const from = document.getElementById('r-from').value.replace(/-/g,'');
+  const to   = document.getElementById('r-to').value.replace(/-/g,'');
+
+  const rows = [['Datum','Technieker','Workorder','Merk','Model','Variant','Chassisnummer','Nummerplaat','Werktijd (min)']];
+  const byTech = {};
+  reportData.forEach(r => {
+    rows.push([r.date, r.tech, r.wo, r.brand, r.model, r.variant, r.vin, r.plate, r.duration]);
+    if (!byTech[r.tech]) byTech[r.tech] = 0;
+    byTech[r.tech] += r.duration;
+  });
+
+  // Subtotals
+  Object.entries(byTech).forEach(([tech, dur]) => {
+    rows.push(['', `Subtotaal ${tech}`, '', '', '', '', '', '', dur]);
+  });
+  rows.push(['', 'Eindtotaal', '', '', '', '', '', '',
+    reportData.reduce((s,r) => s + r.duration, 0)]);
+
+  const ws  = XLSX.utils.aoa_to_sheet(rows);
+  const wb  = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Rapport');
+  XLSX.writeFile(wb, `workprep_rapport_${from}_${to}.xlsx`);
+}
+
+// ================================================
+// NOTIFICATIONS
+// ================================================
+function updateUnreadBadge() {
+  S.unreadCount = S.notifications.filter(n => !n.read_at).length;
+  const badge = document.getElementById('tab-notif-badge');
+  const mobBadge = document.querySelector('#mnb-notif');
+  if (S.unreadCount > 0) {
+    badge.style.display = 'inline';
+    badge.textContent = S.unreadCount;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderNotifList() {
+  const el = document.getElementById('notif-list');
+  if (!S.notifications.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--t3);font-size:12px;">Geen notificaties</div>';
+    return;
+  }
+  el.innerHTML = S.notifications.map(n => `
+    <div class="notif-item ${n.read_at ? '' : 'unread'}" onclick="markRead('${n.id}')">
+      <div class="notif-type">${notifTypeLabel(n.type)}</div>
+      <div class="notif-msg">${escHtml(n.message)}</div>
+      <div class="notif-ts">${fmtTs(n.sent_at)}</div>
+    </div>
+  `).join('');
+
+  // Mobile copy
+  document.getElementById('mob-notif').innerHTML = el.innerHTML;
+}
+
+function notifTypeLabel(type) {
+  const map = {
+    new_job: 'Nieuwe job',
+    rejected: 'Job geweigerd',
+    note: 'Notitie',
+    timer: 'Timer',
+  };
+  return map[type] || type;
+}
+
+async function markRead(notifId) {
+  await sb.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notifId);
+  const n = S.notifications.find(n => n.id === notifId);
+  if (n) n.read_at = new Date().toISOString();
+  updateUnreadBadge();
+  renderNotifList();
+}
+
+async function markAllRead() {
+  const unread = S.notifications.filter(n => !n.read_at).map(n => n.id);
+  if (!unread.length) return;
+  await sb.from('notifications').update({ read_at: new Date().toISOString() }).in('id', unread);
+  S.notifications.forEach(n => { if (!n.read_at) n.read_at = new Date().toISOString(); });
+  updateUnreadBadge();
+  renderNotifList();
+  toast('Alles als gelezen gemarkeerd');
+}
+
+// ================================================
+// SOUND
+// ================================================
+let audioCtx = null;
+
+function playNotifSound() {
+  if (!S.soundOn) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.3);
+  } catch(e) {}
+}
+
+function toggleSound() {
+  S.soundOn = !S.soundOn;
+  document.getElementById('sound-btn').textContent = S.soundOn ? '🔔' : '🔕';
+  toast(S.soundOn ? 'Geluid aan' : 'Geluid uit');
+}
+
+// ================================================
+// VIEW SWITCHING
+// ================================================
+function switchView(view) {
+  ['chef','templates','report','notif'].forEach(v => {
+    document.getElementById(`view-${v}`)?.classList.remove('active');
+    document.getElementById(`tab-${v}`)?.classList.remove('active');
+  });
+  document.getElementById(`view-${view}`)?.classList.add('active');
+  document.getElementById(`tab-${view}`)?.classList.add('active');
+}
+
+function switchMobView(view) {
+  ['chef','templates','report','notif'].forEach(v => {
+    document.getElementById(`mob-${v}`).classList.remove('active');
+    document.getElementById(`mnb-${v}`)?.classList.remove('active');
+  });
+  document.getElementById(`mob-${view}`).classList.add('active');
+  document.getElementById(`mnb-${view}`)?.classList.add('active');
+}
+
+// ================================================
+// MODAL HELPERS
+// ================================================
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('overlay')) closeModal(e.target.id);
+});
+
+// ================================================
+// MISC HELPERS
+// ================================================
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function statusLabel(s) {
+  const m = { waiting:'Wacht', active:'Actief', paused:'Pauze', charging:'Opladen',
+    updating:'Software', done:'Klaar', unassigned:'Niet-toegewezen', rejected:'Geweigerd', handed_over:'Overgedragen' };
+  return m[s] || s;
+}
+
+function fmtTs(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString('nl-BE', { day:'2-digit', month:'2-digit' }) + ' ' +
+         d.toLocaleTimeString('nl-BE', { hour:'2-digit', minute:'2-digit' });
+}
+
+function toast(msg, duration = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.href = 'workprep-login.html';
+}
+
+// ================================================
+// BOOT
+// ================================================
+init();
+</script>
+</body>
+</html>
