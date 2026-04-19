@@ -2264,10 +2264,21 @@ function renderJobDetail(jobId) {
       <div class="job-actions">${actionHtml}</div>
     </div>
     ${waitHtml}
-    <div id="tasks-container-${jobId}">${tasksHtml || '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Geen taken · voeg er toe via "+ Taak"</div>'}</div>`;
+    <div id="tasks-container-${jobId}">${tasksHtml || '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Geen taken · voeg er toe via "+ Taak"</div>'}</div>
+    <div style="padding:16px 0 8px;text-align:center;">
+      <button class="btn bgh bsm" onclick="syncJob('${jobId}')" style="font-size:11px;color:var(--t3);">
+        ↻ Synchroniseren
+      </button>
+    </div>`;
 
   content.innerHTML = html;
   document.getElementById('mob-tasks').innerHTML = `<div style="padding-bottom:60px;">${html}</div>`;
+}
+
+async function syncJob(jobId) {
+  await loadJobsForDay();
+  renderJobDetail(jobId);
+  toast('Gesynchroniseerd ✓');
 }
 
 async function saveDataField(taskId, fieldKey, value) {
