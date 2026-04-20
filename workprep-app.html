@@ -1285,6 +1285,22 @@ textarea.iif { min-height: 70px; resize: vertical; }
     </div>
   </div>
 </div>
+<!-- CORRECT DAY MODAL -->
+<div class="mo" id="m-correctday">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title">⏱ Eindtijd Corrigeren</div>
+    <div class="ig">
+      <label class="il">Correcte eindtijd</label>
+      <input type="datetime-local" class="iif" id="correctday-time">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-correctday')">Annuleren</button>
+      <button class="btn bp" style="flex:2;" onclick="saveCorrectDay()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
 <div id="confirm-overlay">
   <div class="confirm-box">
     <div class="confirm-title" id="conf-title">Bevestigen</div>
@@ -2398,6 +2414,29 @@ function renderAdminView() {
 // ================================================
 // WORK DAY HISTORY
 // ================================================
+let _correctDayId = null;
+
+function openCorrectDay(workDayId, currentEnd) {
+  _correctDayId = workDayId;
+  const dt = currentEnd ? new Date(currentEnd) : new Date();
+  // Format for datetime-local input (local time)
+  const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 16);
+  document.getElementById('correctday-time').value = local;
+  openModal('m-correctday');
+}
+
+async function saveCorrectDay() {
+  const val = document.getElementById('correctday-time').value;
+  if (!val) { toast('Vul een eindtijd in'); return; }
+  await sb.from('work_days').update({
+    actual_end: new Date(val).toISOString(),
+  }).eq('id', _correctDayId);
+  closeModal('m-correctday');
+  toast('Eindtijd gecorrigeerd ✓');
+  loadWorkDayHistory();
+}
+
 async function loadWorkDayHistory() {
   const { data: days } = await sb.from('work_days')
     .select('*, customers(name)')
@@ -2429,6 +2468,7 @@ async function loadWorkDayHistory() {
           ${day.status==='closed'?'Gesloten':'Open'}
         </span>
         <button class="btn bgh bsm" onclick="loadHistoryDay('${day.id}','${day.date}')">Bekijken</button>
+        ${day.status === 'closed' ? `<button class="btn bgh bsm" onclick="openCorrectDay('${day.id}','${day.actual_end}')">⏱ Corrigeren</button>` : ''}
       </div>
     </div>`;
   }).join('');
