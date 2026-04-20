@@ -138,6 +138,8 @@ html, body {
   flex-shrink: 0;
 }
 
+.mob-panel { display: none; }
+
 .mob-nav-row {
   display: flex;
 }
@@ -740,6 +742,10 @@ textarea.iif { min-height: 70px; resize: vertical; }
         style="padding:5px 12px;border:none;cursor:pointer;font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:0.5px;transition:all .15s;background:transparent;color:var(--t2);">
         ⚙️ Beheerder
       </button>
+      <button onclick="window.location.href='workprep-customer.html'"
+        style="padding:5px 12px;border:none;border-left:1px solid var(--border);cursor:pointer;font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:0.5px;transition:all .15s;background:transparent;color:var(--t2);">
+        🏢 Klant
+      </button>
     </div>
     <button class="btn bgh bsm" id="break-btn" style="display:none;" onclick="toggleBreak()">☕ Pauze</button>
     <button class="btn br bsm" id="endday-btn" style="display:none;" onclick="confirmEndDay()">■ Dag Stoppen</button>
@@ -940,8 +946,21 @@ textarea.iif { min-height: 70px; resize: vertical; }
 <div class="mo" id="m-vehicle">
   <div class="md">
     <div class="mo-handle"></div>
-    <div class="mo-title" id="mv-title">🚗 Voertuig Toevoegen</div>
+    <div class="mo-title" id="mv-title">🚗 Voertuig / Job Toevoegen</div>
 
+    <!-- STAP 1: Werkorder (verplicht) -->
+    <div class="ig">
+      <label class="il">Werkorder # <span style="color:var(--red);">*</span></label>
+      <div style="display:flex;gap:7px;">
+        <input type="text" class="iif" id="v-wo" placeholder="WO-nummer of eigen referentie (bv. MAGAZIJN-001)" style="flex:1;">
+        <button class="btn bgh bsm" onclick="openScanner('wo')" style="padding:8px;" title="Scan werkorder">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M14 17v3h3M17 14h3"/></svg>
+        </button>
+      </div>
+      <div class="helper">Verplicht · Scan, typ een WO-nummer of een eigen referentie (bv. MAGAZIJN-MA-0421)</div>
+    </div>
+
+    <!-- STAP 2: Voertuig (optioneel) -->
     <div class="two-col">
       <div class="ig">
         <label class="il">Merk</label>
@@ -949,7 +968,7 @@ textarea.iif { min-height: 70px; resize: vertical; }
           <select class="iif" id="v-brand" onchange="onBrandChange()" style="flex:1;">
             <option value="">— Merk —</option>
           </select>
-          <button class="btn bgh bsm" style="padding:8px;flex-shrink:0;" onclick="quickAddBrand()" title="Nieuw merk">+</button>
+          <button class="btn bgh bsm" style="padding:8px;flex-shrink:0;" onclick="openQuickAdd('brand')" title="Nieuw merk">+</button>
         </div>
       </div>
       <div class="ig">
@@ -958,7 +977,7 @@ textarea.iif { min-height: 70px; resize: vertical; }
           <select class="iif" id="v-model" onchange="onModelChange()" style="flex:1;">
             <option value="">— Model —</option>
           </select>
-          <button class="btn bgh bsm" style="padding:8px;flex-shrink:0;" onclick="quickAddModel()" title="Nieuw model">+</button>
+          <button class="btn bgh bsm" style="padding:8px;flex-shrink:0;" onclick="openQuickAdd('model')" title="Nieuw model">+</button>
         </div>
       </div>
     </div>
@@ -969,17 +988,7 @@ textarea.iif { min-height: 70px; resize: vertical; }
         <select class="iif" id="v-variant" style="flex:1;">
           <option value="">— Variant —</option>
         </select>
-        <button class="btn bgh bsm" style="padding:8px;flex-shrink:0;" onclick="quickAddVariant()" title="Nieuwe variant">+</button>
-      </div>
-    </div>
-
-    <div class="ig">
-      <label class="il">Werkorder #</label>
-      <div style="display:flex;gap:7px;">
-        <input type="text" class="iif" id="v-wo" placeholder="Werkordernummer" style="flex:1;">
-        <button class="btn bgh bsm" onclick="openScanner('wo')" style="padding:8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M14 17v3h3M17 14h3"/></svg>
-        </button>
+        <button class="btn bgh bsm" style="padding:8px;flex-shrink:0;" onclick="openQuickAdd('variant')" title="Nieuwe variant">+</button>
       </div>
     </div>
 
@@ -990,11 +999,7 @@ textarea.iif { min-height: 70px; resize: vertical; }
         <button class="btn bgh bsm" onclick="openScanner('vin')" style="padding:8px;" title="Barcode scannen">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="5" x2="3" y2="19"/><line x1="7" y1="5" x2="7" y2="19"/><line x1="11" y1="5" x2="11" y2="19"/><line x1="15" y1="5" x2="15" y2="19"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
         </button>
-        <button class="btn bgh bsm" onclick="openVinOCR()" style="padding:8px;" title="Tekst scannen via camera/foto">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-        </button>
       </div>
-      <div class="helper">Barcode = streepjescode scannen · Camera = tekst lezen via foto of live scan</div>
     </div>
 
     <div class="ig">
@@ -1013,6 +1018,41 @@ textarea.iif { min-height: 70px; resize: vertical; }
     </div>
   </div>
 </div>
+
+<!-- QUICK ADD BRAND / MODEL / VARIANT MODAL -->
+<div class="mo" id="m-quickadd">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title" id="qa-title">+ Nieuw toevoegen</div>
+    <div class="ig">
+      <label class="il" id="qa-label">Naam</label>
+      <input type="text" class="iif" id="qa-name" placeholder="">
+    </div>
+    <div class="ig" id="qa-powertrain-row" style="display:none;">
+      <label class="il">Aandrijving</label>
+      <select class="iif" id="qa-powertrain">
+        <option value="petrol">Benzine</option>
+        <option value="diesel">Diesel</option>
+        <option value="mild_hybrid" selected>Mild Hybrid</option>
+        <option value="full_hybrid">Full Hybrid</option>
+        <option value="electric">Elektrisch</option>
+        <option value="hydrogen">Waterstof</option>
+        <option value="commercial">Commercieel</option>
+        <option value="other">Overige</option>
+      </select>
+    </div>
+    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:6px;padding:8px 10px;margin-bottom:12px;font-size:11px;color:var(--warn);">
+      ⚠ Nieuw item wordt als <strong>niet-geverifieerd</strong> opgeslagen. Een admin controleert dit nadien.
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-quickadd')">Annuleren</button>
+      <button class="btn bp" style="flex:2;" onclick="saveQuickAdd()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATE CHOOSER MODAL -->
+
 
 <!-- ADD CUSTOMER MODAL -->
 <div class="mo" id="m-customer">
@@ -1038,31 +1078,60 @@ textarea.iif { min-height: 70px; resize: vertical; }
   </div>
 </div>
 
-<!-- ADD TASK MODAL -->
+<!-- ADD TASK MODAL — keuze: template of 1 taak -->
 <div class="mo" id="m-task">
   <div class="md">
     <div class="mo-handle"></div>
-    <div class="mo-title">➕ Taak Toevoegen</div>
-    <div class="ig">
-      <label class="il">Omschrijving</label>
-      <input type="text" class="iif" id="t-label" placeholder="Beschrijf de taak">
+    <div class="mo-title">➕ Taken Toevoegen</div>
+
+    <!-- Keuze-sectie -->
+    <div id="task-choice" style="display:block;">
+      <div onclick="showTaskSection('template')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:24px;">📋</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;">Template laden</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:2px;">Voeg een hele reeks taken toe in één klik</div>
+        </div>
+      </div>
+      <div onclick="showTaskSection('manual')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:24px;">✏️</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;">Één taak toevoegen</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:2px;">Voeg een manuele taak toe</div>
+        </div>
+      </div>
+      <button class="btn bgh bfull" style="margin-top:4px;" onclick="closeModal('m-task')">Annuleren</button>
     </div>
-    <div class="ig">
-      <label class="il">Categorie</label>
-      <select class="iif" id="t-cat">
-        <option value="PDI">PDI</option>
-        <option value="Software">Software</option>
-        <option value="Opties">Opties / Pakketten</option>
-        <option value="Garantie">Garantie</option>
-        <option value="Mechanisch">Mechanisch</option>
-        <option value="Carrosserie">Carrosserie</option>
-        <option value="Admin">Admin</option>
-        <option value="Overige">Overige</option>
-      </select>
+
+    <!-- Template sectie -->
+    <div id="task-section-template" style="display:none;">
+      <div id="task-template-list"></div>
+      <button class="btn bgh bfull" style="margin-top:8px;" onclick="showTaskSection('choice')">← Terug</button>
     </div>
-    <div style="display:flex;gap:8px;margin-top:8px;">
-      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-task')">Annuleren</button>
-      <button class="btn bp" style="flex:2;" onclick="saveTask()">Taak Toevoegen</button>
+
+    <!-- Manuele taak sectie -->
+    <div id="task-section-manual" style="display:none;">
+      <div class="ig">
+        <label class="il">Omschrijving</label>
+        <input type="text" class="iif" id="t-label" placeholder="Beschrijf de taak">
+      </div>
+      <div class="ig">
+        <label class="il">Categorie</label>
+        <select class="iif" id="t-cat">
+          <option value="PDI">PDI</option>
+          <option value="Software">Software</option>
+          <option value="Opties">Opties / Pakketten</option>
+          <option value="Garantie">Garantie</option>
+          <option value="Mechanisch">Mechanisch</option>
+          <option value="Carrosserie">Carrosserie</option>
+          <option value="Admin">Admin</option>
+          <option value="Overige">Overige</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn bgh" style="flex:1;" onclick="showTaskSection('choice')">← Terug</button>
+        <button class="btn bp" style="flex:2;" onclick="saveTask()">Taak Toevoegen</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1107,38 +1176,6 @@ textarea.iif { min-height: 70px; resize: vertical; }
       <button class="btn bp bsm" onclick="manualScan()">OK</button>
     </div>
     <button class="btn bgh bfull" style="margin-top:7px;" onclick="closeScan()">Annuleren</button>
-  </div>
-</div>
-
-<!-- VIN OCR MODAL -->
-<div class="mo" id="m-vin-ocr">
-  <div class="md">
-    <div class="mo-handle"></div>
-    <div class="mo-title">📸 VIN Tekst Herkenning</div>
-    <p style="font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.6;">
-      Maak een foto van het chassisnummer of kies er een uit je galerij. De app leest de tekst automatisch.
-    </p>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <button class="btn bp" style="flex:1;" onclick="captureVinPhoto('camera')">📷 Camera</button>
-      <button class="btn bgh" style="flex:1;" onclick="captureVinPhoto('gallery')">🖼 Galerij</button>
-    </div>
-    <input type="file" id="vin-file-input" accept="image/*" style="display:none;" onchange="processVinImage(this)">
-    <div id="vin-ocr-preview" style="display:none;">
-      <img id="vin-preview-img" style="width:100%;border-radius:6px;margin-bottom:10px;max-height:200px;object-fit:contain;">
-      <div id="vin-ocr-result" style="background:var(--bg3);border-radius:6px;padding:10px;margin-bottom:10px;">
-        <div style="font-size:11px;color:var(--t3);margin-bottom:5px;">Herkende tekst:</div>
-        <div id="vin-ocr-text" style="font-family:var(--fm);font-size:14px;color:var(--accent);letter-spacing:2px;"></div>
-      </div>
-      <div class="ig">
-        <label class="il">VIN (controleer en corrigeer indien nodig)</label>
-        <input type="text" class="iif" id="vin-ocr-input" placeholder="17-karakter VIN" maxlength="17" style="text-transform:uppercase;font-family:var(--fm);letter-spacing:2px;">
-      </div>
-      <button class="btn bg bfull" onclick="applyVinOCR()">✓ VIN Bevestigen</button>
-    </div>
-    <div id="vin-ocr-loading" style="display:none;text-align:center;padding:20px;color:var(--t2);">
-      <div style="font-size:13px;">Tekst herkennen...</div>
-    </div>
-    <button class="btn bgh bfull" style="margin-top:8px;" onclick="closeModal('m-vin-ocr')">Annuleren</button>
   </div>
 </div>
 
@@ -1210,9 +1247,6 @@ textarea.iif { min-height: 70px; resize: vertical; }
         <button class="btn bgh bsm" onclick="openScanner('vin-edit')" style="padding:8px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="5" x2="3" y2="19"/><line x1="7" y1="5" x2="7" y2="19"/><line x1="11" y1="5" x2="11" y2="19"/><line x1="15" y1="5" x2="15" y2="19"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
         </button>
-        <button class="btn bgh bsm" onclick="openVinOCR()" style="padding:8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-        </button>
       </div>
     </div>
     <div class="ig">
@@ -1277,7 +1311,6 @@ textarea.iif { min-height: 70px; resize: vertical; }
 // ================================================
 const SUPABASE_URL = 'https://tiavzsywbiwajvxknqof.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_aunpvg532iEoEbvOJ08-DA_XOR1rQU4';
-const ANTHROPIC_KEY = ''; // Add your Anthropic API key here for VIN OCR
 
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1640,16 +1673,17 @@ function openAddVehicle() {
 }
 
 async function saveVehicle() {
-  const wo      = document.getElementById('v-wo').value.trim();
-  const vin     = document.getElementById('v-vin').value.trim().toUpperCase();
-  const plate   = document.getElementById('v-plate').value.trim().toUpperCase();
-  const notes   = document.getElementById('v-notes').value.trim();
+  const wo        = document.getElementById('v-wo').value.trim();
+  const vin       = document.getElementById('v-vin').value.trim().toUpperCase();
+  const plate     = document.getElementById('v-plate').value.trim().toUpperCase();
+  const notes     = document.getElementById('v-notes').value.trim();
   const brandId   = document.getElementById('v-brand').value || null;
   const modelId   = document.getElementById('v-model').value || null;
   const variantId = document.getElementById('v-variant').value || null;
 
-  if (!wo && !vin && !plate) {
-    toast('Vul minstens een werkorder, VIN of kenteken in');
+  if (!wo) {
+    toast('Werkordernummer is verplicht');
+    document.getElementById('v-wo').focus();
     return;
   }
 
@@ -1657,19 +1691,18 @@ async function saveVehicle() {
   const activeJob = S.jobs.find(j => j.status === 'active');
   if (activeJob) await pauseJob(activeJob.id, true);
 
-  // Create job in database
   const { data: job, error } = await sb.from('jobs').insert({
-    work_day_id: S.workDay.id,
-    customer_id: S.workDay.customer_id,
-    user_id:     S.user.id,
-    brand_id:    brandId,
-    model_id:    modelId,
-    variant_id:  variantId,
-    work_order:  wo || null,
-    vin:         vin || null,
+    work_day_id:   S.workDay.id,
+    customer_id:   S.workDay.customer_id,
+    user_id:       S.user.id,
+    brand_id:      brandId,
+    model_id:      modelId,
+    variant_id:    variantId,
+    work_order:    wo,
+    vin:           vin || null,
     license_plate: plate || null,
-    notes:       notes || null,
-    status:      'active',
+    notes:         notes || null,
+    status:        'active',
   }).select(`
     *,
     brands(name),
@@ -1680,67 +1713,49 @@ async function saveVehicle() {
 
   if (error) { toast('Fout: ' + error.message); return; }
 
-  // Load tasks from template if variant selected
-  if (variantId) await loadTasksFromTemplate(job.id, variantId);
-
-  // Start work session
   await startSession(job.id);
-
   S.jobs.push(job);
   closeModal('m-vehicle');
   selectJob(job.id);
   await loadJobsForDay();
 
-  const name = [job.brands?.name, job.models?.name].filter(Boolean).join(' ') || wo || vin || 'Nieuw voertuig';
+  const name = [job.brands?.name, job.models?.name].filter(Boolean).join(' ') || wo;
   addTimeline('Gestart: ' + name);
   toast('Gestart: ' + name);
 }
 
-async function loadTasksFromTemplate(jobId, variantId) {
-  // First try customer-specific template, then fall back to global (null customer_id)
-  let templates = null;
-
-  // Try customer-specific first
-  const { data: custTpl } = await sb.from('job_templates')
-    .select('id')
-    .eq('variant_id', variantId)
-    .eq('customer_id', S.workDay.customer_id)
-    .limit(1);
-
-  if (custTpl?.length) {
-    templates = custTpl;
-  } else {
-    // Fall back to global template (customer_id is null)
-    const { data: globalTpl } = await sb.from('job_templates')
-      .select('id')
-      .eq('variant_id', variantId)
-      .is('customer_id', null)
-      .limit(1);
-    templates = globalTpl;
-  }
-
-  if (!templates?.length) return;
+// ================================================
+// TEMPLATE CHOOSER
+// ================================================
+async function applyTemplate(templateId) {
+  closeModal('m-task');
+  const jobId = S.selectedJob;
+  if (!jobId) return;
 
   const { data: tasks } = await sb.from('job_template_tasks')
     .select('*')
-    .eq('template_id', templates[0].id)
+    .eq('template_id', templateId)
     .order('order_index');
 
-  if (!tasks?.length) return;
+  if (!tasks?.length) { toast('Template heeft geen taken'); return; }
 
-  // Insert tasks for this job
   const jobTasks = tasks.map(t => ({
-    job_id:           jobId,
-    template_task_id: t.id,
-    category:         t.category,
-    label:            t.label,
-    task_type:        t.task_type,
-    order_index:      t.order_index,
-    data_field_config: t.data_field_config,
-    is_custom:        false,
+    job_id:            jobId,
+    template_task_id:  t.id,
+    category:          t.category,
+    label:             t.label,
+    task_type:         t.task_type,
+    order_index:       t.order_index,
+    is_custom:         false,
   }));
 
-  await sb.from('job_tasks').insert(jobTasks);
+  const { error: insertError } = await sb.from('job_tasks').insert(jobTasks);
+  console.log('job_tasks insert — jobId:', jobId, 'count:', jobTasks.length, 'error:', insertError);
+  if (insertError) { toast('Fout bij laden taken: ' + insertError.message); return; }
+
+  await loadJobsForDay();
+  if (S.selectedJob) renderJobDetail(S.selectedJob);
+  toast('Template geladen ✓');
 }
 
 // ================================================
@@ -1976,7 +1991,61 @@ async function toggleTask(taskId, jobId) {
 function openAddTask() {
   if (!S.selectedJob) return;
   document.getElementById('t-label').value = '';
+  showTaskSection('choice');
   openModal('m-task');
+}
+
+function showTaskSection(section) {
+  ['choice','template','manual'].forEach(s => {
+    const el = document.getElementById(s === 'choice' ? 'task-choice' : `task-section-${s}`);
+    if (el) el.style.display = s === section ? 'block' : 'none';
+  });
+
+  if (section === 'template') {
+    loadTaskTemplateList();
+  }
+}
+
+async function loadTaskTemplateList() {
+  const job = S.jobs.find(j => j.id === S.selectedJob);
+  const variantId = job?.variant_id || null;
+
+  // Twee aparte queries, dan samenvoegen
+  const [{ data: variantTpls }, { data: genericTpls }] = await Promise.all([
+    variantId
+      ? sb.from('job_templates')
+          .select('id, name, customer_id, variant_id')
+          .eq('variant_id', variantId)
+          .or(`customer_id.eq.${S.workDay.customer_id},customer_id.is.null`)
+      : Promise.resolve({ data: [] }),
+    sb.from('job_templates')
+      .select('id, name, customer_id, variant_id')
+      .is('variant_id', null)
+      .or(`customer_id.eq.${S.workDay.customer_id},customer_id.is.null`),
+  ]);
+
+  const templates = [...(variantTpls || []), ...(genericTpls || [])];
+  console.log('Templates gevonden:', templates);
+
+  const list = document.getElementById('task-template-list');
+  if (!templates?.length) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Geen templates beschikbaar voor dit voertuig</div>';
+    return;
+  }
+
+  list.innerHTML = templates.map(t => {
+    const tag = t.customer_id
+      ? `<span class="tag">klantspecifiek</span>`
+      : t.variant_id
+        ? `<span class="tag" style="background:rgba(34,197,94,0.1);color:var(--green);border-color:rgba(34,197,94,0.2);">variant</span>`
+        : `<span class="tag" style="background:rgba(148,163,184,0.1);color:var(--t2);border-color:var(--border);">algemeen</span>`;
+    return `<div onclick="applyTemplate('${t.id}')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;font-weight:600;">${escHtml(t.name)}</div>
+        ${tag}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function saveTask() {
@@ -2199,10 +2268,21 @@ function renderJobDetail(jobId) {
       <div class="job-actions">${actionHtml}</div>
     </div>
     ${waitHtml}
-    <div id="tasks-container-${jobId}">${tasksHtml || '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Geen taken · voeg er toe via "+ Taak"</div>'}</div>`;
+    <div id="tasks-container-${jobId}">${tasksHtml || '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Geen taken · voeg er toe via "+ Taak"</div>'}</div>
+    <div style="padding:16px 0 8px;text-align:center;">
+      <button class="btn bgh bsm" onclick="syncJob('${jobId}')" style="font-size:11px;color:var(--t3);">
+        ↻ Synchroniseren
+      </button>
+    </div>`;
 
   content.innerHTML = html;
   document.getElementById('mob-tasks').innerHTML = `<div style="padding-bottom:60px;">${html}</div>`;
+}
+
+async function syncJob(jobId) {
+  await loadJobsForDay();
+  renderJobDetail(jobId);
+  toast('Gesynchroniseerd ✓');
 }
 
 async function saveDataField(taskId, fieldKey, value) {
@@ -2401,53 +2481,75 @@ async function loadHistoryDay(workDayId, date) {
   document.body.appendChild(overlay);
 }
 
-async function quickAddBrand() {
-  const name = prompt('Nieuw merk:');
-  if (!name?.trim()) return;
-  const { data, error } = await sb.from('brands').insert({
-    organization_id: S.orgId,
-    name: name.trim(),
-  }).select().single();
-  if (error) { toast('Fout: ' + error.message); return; }
-  S.brands.push(data);
-  await loadBrands();
-  document.getElementById('v-brand').value = data.id;
-  toast('Merk toegevoegd: ' + data.name);
+// ================================================
+// QUICK ADD BRAND / MODEL / VARIANT (via modal)
+// ================================================
+function openQuickAdd(type) {
+  S.qaType = type;
+  const cfg = {
+    brand:   { title: '+ Nieuw Merk',    label: 'Merknaam',              ph: 'bv. Volkswagen' },
+    model:   { title: '+ Nieuw Model',   label: 'Modelnaam',             ph: 'bv. Golf' },
+    variant: { title: '+ Nieuwe Variant',label: 'Variant / Motorisatie', ph: 'bv. 1.5 eTSI 150pk' },
+  };
+  if (type === 'model' && !document.getElementById('v-brand').value) {
+    toast('Selecteer eerst een merk'); return;
+  }
+  if (type === 'variant' && !document.getElementById('v-model').value) {
+    toast('Selecteer eerst een model'); return;
+  }
+  const c = cfg[type];
+  document.getElementById('qa-title').textContent      = c.title;
+  document.getElementById('qa-label').textContent      = c.label;
+  document.getElementById('qa-name').placeholder       = c.ph;
+  document.getElementById('qa-name').value             = '';
+  document.getElementById('qa-powertrain-row').style.display = type === 'variant' ? 'block' : 'none';
+  openModal('m-quickadd');
+  setTimeout(() => document.getElementById('qa-name').focus(), 200);
 }
 
-async function quickAddModel() {
-  const brandId = document.getElementById('v-brand').value;
-  if (!brandId) { toast('Selecteer eerst een merk'); return; }
-  const name = prompt('Nieuw model:');
-  if (!name?.trim()) return;
-  const { data, error } = await sb.from('models').insert({
-    brand_id: brandId,
-    name: name.trim(),
-  }).select().single();
-  if (error) { toast('Fout: ' + error.message); return; }
-  // Refresh model dropdown
-  await onBrandChange();
-  document.getElementById('v-model').value = data.id;
-  toast('Model toegevoegd: ' + data.name);
-}
+async function saveQuickAdd() {
+  const name = document.getElementById('qa-name').value.trim();
+  if (!name) { toast('Vul een naam in'); return; }
 
-async function quickAddVariant() {
-  const modelId = document.getElementById('v-model').value;
-  if (!modelId) { toast('Selecteer eerst een model'); return; }
-  const name = prompt('Nieuwe variant (bv. Mild Hybrid B4):');
-  if (!name?.trim()) return;
-  const powertrain = prompt('Aandrijving? (petrol / diesel / mild_hybrid / full_hybrid / electric)', 'mild_hybrid');
-  const { data, error } = await sb.from('variants').insert({
-    model_id:                    modelId,
-    name:                        name.trim(),
-    powertrain_type:             powertrain?.trim() || 'other',
-    default_charging_duration_min:  30,
-    default_update_duration_min:    60,
-  }).select().single();
-  if (error) { toast('Fout: ' + error.message); return; }
-  await onModelChange();
-  document.getElementById('v-variant').value = data.id;
-  toast('Variant toegevoegd: ' + data.name);
+  if (S.qaType === 'brand') {
+    const { data, error } = await sb.from('brands').insert({
+      organization_id: S.orgId,
+      name,
+    }).select().single();
+    if (error) { toast('Fout: ' + error.message); return; }
+    S.brands.push(data);
+    await loadBrands();
+    document.getElementById('v-brand').value = data.id;
+    toast('Merk toegevoegd ✓');
+
+  } else if (S.qaType === 'model') {
+    const brandId = document.getElementById('v-brand').value;
+    const { data, error } = await sb.from('models').insert({
+      brand_id: brandId,
+      name,
+    }).select().single();
+    if (error) { toast('Fout: ' + error.message); return; }
+    await onBrandChange();
+    document.getElementById('v-model').value = data.id;
+    toast('Model toegevoegd ✓');
+
+  } else if (S.qaType === 'variant') {
+    const modelId   = document.getElementById('v-model').value;
+    const powertrain = document.getElementById('qa-powertrain').value;
+    const { data, error } = await sb.from('variants').insert({
+      model_id:                      modelId,
+      name,
+      powertrain_type:               powertrain,
+      default_charging_duration_min: 30,
+      default_update_duration_min:   60,
+    }).select().single();
+    if (error) { toast('Fout: ' + error.message); return; }
+    await onModelChange();
+    document.getElementById('v-variant').value = data.id;
+    toast('Variant toegevoegd ✓');
+  }
+
+  closeModal('m-quickadd');
 }
 function openAddCustomer() { openModal('m-customer'); }
 
@@ -2691,90 +2793,6 @@ function stopCamera() {
 }
 
 function closeScan() { stopCamera(); closeModal('m-scan'); }
-
-// ================================================
-// VIN OCR
-// ================================================
-function openVinOCR() {
-  document.getElementById('vin-ocr-preview').style.display  = 'none';
-  document.getElementById('vin-ocr-loading').style.display  = 'none';
-  openModal('m-vin-ocr');
-}
-
-function captureVinPhoto(source) {
-  const input = document.getElementById('vin-file-input');
-  input.setAttribute('capture', source === 'camera' ? 'environment' : '');
-  input.click();
-}
-
-async function processVinImage(input) {
-  const file = input.files[0];
-  if (!file) return;
-
-  // Show preview
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    document.getElementById('vin-preview-img').src = e.target.result;
-    document.getElementById('vin-ocr-preview').style.display = 'none';
-    document.getElementById('vin-ocr-loading').style.display = 'block';
-
-    try {
-      // Convert to base64
-      const base64 = e.target.result.split(',')[1];
-
-      // Call Anthropic API for OCR
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 200,
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: { type: 'base64', media_type: file.type, data: base64 }
-              },
-              {
-                type: 'text',
-                text: 'Extract the VIN (Vehicle Identification Number) from this image. A VIN is exactly 17 characters, contains only letters and numbers (no I, O or Q). Reply with ONLY the VIN, nothing else. If you cannot find a VIN, reply with "NOT_FOUND".'
-              }
-            ]
-          }]
-        })
-      });
-
-      const data = await response.json();
-      const vin  = data.content?.[0]?.text?.trim().toUpperCase() || 'NOT_FOUND';
-
-      document.getElementById('vin-ocr-loading').style.display = 'none';
-      document.getElementById('vin-ocr-preview').style.display = 'block';
-      document.getElementById('vin-ocr-text').textContent = vin === 'NOT_FOUND' ? 'Geen VIN gevonden' : vin;
-      document.getElementById('vin-ocr-input').value = vin === 'NOT_FOUND' ? '' : vin;
-
-    } catch(err) {
-      document.getElementById('vin-ocr-loading').style.display = 'none';
-      document.getElementById('vin-ocr-preview').style.display = 'block';
-      document.getElementById('vin-ocr-text').textContent = 'Fout bij herkenning';
-      document.getElementById('vin-ocr-input').value = '';
-      toast('OCR fout · typ het VIN handmatig');
-    }
-  };
-
-  reader.readAsDataURL(file);
-}
-
-function applyVinOCR() {
-  const vin = document.getElementById('vin-ocr-input').value.trim().toUpperCase();
-  if (!vin || vin.length !== 17) {
-    toast('VIN moet exact 17 karakters zijn');
-    return;
-  }
-  document.getElementById('v-vin').value = vin;
-  closeModal('m-vin-ocr');
-  toast('VIN ingevuld: ' + vin);
-}
 
 // ================================================
 // REAL-TIME SUBSCRIPTION
@@ -3080,6 +3098,10 @@ async function doLogout() {
 function fmtTime(ms) {
   const s = Math.floor(Math.abs(ms) / 1000);
   return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ================================================

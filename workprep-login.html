@@ -357,13 +357,21 @@ const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ================================================
-// CHECK IF ALREADY LOGGED IN
+// ROLE-BASED REDIRECT
 // ================================================
+async function getRedirectUrl(userId) {
+  const { data } = await sb.from('user_roles')
+    .select('role')
+    .eq('user_id', userId)
+    .in('role', ['customer_admin', 'customer_accountant'])
+    .maybeSingle();
+  return data ? 'workprep-customer.html' : 'workprep-app.html';
+}
+
 async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
-    // Already logged in — redirect to app
-    window.location.href = 'workprep-app.html';
+    window.location.href = await getRedirectUrl(session.user.id);
   }
 }
 
@@ -407,11 +415,10 @@ async function doLogin() {
     return;
   }
 
-  // Success — redirect to app
+  // Success — redirect based on role
   showMsg(msg, 'success', 'Ingelogd! Even laden...');
-  setTimeout(() => {
-    window.location.href = 'workprep-app.html';
-  }, 600);
+  const url = await getRedirectUrl(data.user.id);
+  setTimeout(() => { window.location.href = url; }, 600);
 }
 
 // ================================================
