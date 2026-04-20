@@ -1776,8 +1776,13 @@ async function startSession(jobId) {
 }
 
 async function endSession(jobId) {
-  const session = S.sessions[jobId];
-  if (!session) return;
+  let session = S.sessions[jobId];
+  if (!session) {
+    const { data } = await sb.from('work_sessions')
+      .select('id').eq('job_id', jobId).is('ended_at', null).maybeSingle();
+    if (!data) return;
+    session = data;
+  }
 
   await sb.from('work_sessions').update({
     ended_at: new Date().toISOString(),
