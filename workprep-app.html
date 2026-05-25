@@ -2940,8 +2940,11 @@ function toast(msg) {
 // ================================================
 function confirmEndDay() {
   const now = new Date();
-  const iso = now.toISOString().slice(0,16);
-  document.getElementById('endday-time').value = iso;
+  // Gebruik lokale tijd voor datetime-local input (niet UTC) zodat de conversie
+  // in doEndDay() via new Date(localString) correct naar UTC omzet.
+  const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 16);
+  document.getElementById('endday-time').value = localIso;
   document.getElementById('endday-notes').value = '';
 
   // Build summary
