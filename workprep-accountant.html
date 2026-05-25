@@ -249,7 +249,7 @@ tbody tr:hover td { background: rgba(59,130,246,0.04); }
       <table>
         <thead>
           <tr>
-            <th>Datum</th>
+            <th style="min-width:100px;">Datum</th>
             <th>Technieker</th>
             <th>Workorder</th>
             <th>Merk</th>
@@ -411,10 +411,11 @@ async function loadReport() {
   const wdIds = wds.map(w => w.id);
   const wdMap = Object.fromEntries(wds.map(w => [w.id, w]));
 
-  // Jobs
+  // Jobs — filter op work_day én customer_id
   const { data: jobs } = await sb.from('jobs')
     .select('id, work_day_id, work_order, vin, license_plate, status, brands(name), models(name), variants(name)')
     .in('work_day_id', wdIds)
+    .eq('customer_id', S.customerId)
     .neq('status', 'rejected');
 
   if (!jobs?.length) {
@@ -545,7 +546,7 @@ function exportExcel() {
   const ws = XLSX.utils.aoa_to_sheet(rows);
 
   // Column widths
-  ws['!cols'] = [10, 20, 16, 12, 16, 16, 20, 14, 14, 10].map(w => ({ wch: w }));
+  ws['!cols'] = [12, 20, 16, 12, 16, 16, 20, 14, 14, 10].map(w => ({ wch: w }));
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Rapport');
