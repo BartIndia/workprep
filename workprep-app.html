@@ -579,6 +579,22 @@ textarea.iif { min-height: 70px; resize: vertical; }
 
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
+/* Pauze-knoppen in dag-afsluiten modal */
+.break-pill {
+  padding: 7px 16px;
+  border-radius: 20px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--t2);
+  font-family: var(--fh);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.break-pill:hover { border-color: var(--accent); color: var(--text); }
+.break-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
 /* ================================================
    SCANNER
 ================================================ */
@@ -1273,6 +1289,16 @@ textarea.iif { min-height: 70px; resize: vertical; }
     <div class="ig">
       <label class="il">Eindtijd</label>
       <input type="datetime-local" class="iif" id="endday-time">
+    </div>
+    <div class="ig">
+      <label class="il">Middagpauze</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="break-pill" data-min="0"  onclick="selectBreak(0)">Geen</button>
+        <button class="break-pill" data-min="30" onclick="selectBreak(30)">30 min</button>
+        <button class="break-pill active" data-min="60" onclick="selectBreak(60)">60 min</button>
+        <button class="break-pill" data-min="90" onclick="selectBreak(90)">90 min</button>
+      </div>
+      <input type="hidden" id="endday-break" value="60">
     </div>
     <div class="ig">
       <label class="il">Notities (optioneel)</label>
@@ -2938,6 +2964,13 @@ function toast(msg) {
 // ================================================
 // END DAY
 // ================================================
+function selectBreak(min) {
+  document.getElementById('endday-break').value = min;
+  document.querySelectorAll('.break-pill').forEach(p => {
+    p.classList.toggle('active', parseInt(p.dataset.min) === min);
+  });
+}
+
 function confirmEndDay() {
   const now = new Date();
   // Gebruik lokale tijd voor datetime-local input (niet UTC) zodat de conversie
@@ -2946,6 +2979,8 @@ function confirmEndDay() {
     .toISOString().slice(0, 16);
   document.getElementById('endday-time').value = localIso;
   document.getElementById('endday-notes').value = '';
+  // Standaard 60 min pauze
+  selectBreak(60);
 
   // Build summary
   const total   = S.jobs.length;
@@ -2974,8 +3009,9 @@ function confirmEndDay() {
 }
 
 async function doEndDay() {
-  const endTime = document.getElementById('endday-time').value;
-  const notes   = document.getElementById('endday-notes').value.trim();
+  const endTime   = document.getElementById('endday-time').value;
+  const notes     = document.getElementById('endday-notes').value.trim();
+  const breakMin  = parseInt(document.getElementById('endday-break').value) || 0;
 
   // Close all active sessions
   for (const job of S.jobs.filter(j => j.status === 'active')) {
@@ -2985,9 +3021,10 @@ async function doEndDay() {
 
   // Close work day
   await sb.from('work_days').update({
-    status:     'closed',
-    actual_end: endTime ? new Date(endTime).toISOString() : new Date().toISOString(),
-    notes:      notes || null,
+    status:            'closed',
+    actual_end:        endTime ? new Date(endTime).toISOString() : new Date().toISOString(),
+    break_duration_min: breakMin,
+    notes:             notes || null,
   }).eq('id', S.workDay.id);
 
   // Stop day timer
