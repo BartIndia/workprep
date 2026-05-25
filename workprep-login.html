@@ -365,7 +365,9 @@ async function getRedirectUrl(userId) {
     .eq('user_id', userId)
     .in('role', ['customer_admin', 'customer_accountant'])
     .maybeSingle();
-  return data ? 'workprep-customer.html' : 'workprep-app.html';
+  if (!data) return 'workprep-app.html';
+  if (data.role === 'customer_accountant') return 'workprep-accountant.html';
+  return 'workprep-customer.html';
 }
 
 async function checkSession() {
