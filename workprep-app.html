@@ -1686,9 +1686,22 @@ function startBreak() {
   toast('Pauze gestart');
 }
 
-function endBreak() {
-  if (S.breakStart) S.totalBreak += Date.now() - S.breakStart;
-  S.onBreak   = false;
+async function endBreak() {
+  if (S.breakStart) {
+    const breakMs  = Date.now() - S.breakStart;
+    S.totalBreak  += breakMs;
+    const breakMin = Math.round(breakMs / 60000);
+
+    // Sla pauzetijd op in de database (cumulatief)
+    if (S.workDay?.id && breakMin > 0) {
+      const newTotal = (S.workDay.break_duration_min || 0) + breakMin;
+      await sb.from('work_days')
+        .update({ break_duration_min: newTotal })
+        .eq('id', S.workDay.id);
+      S.workDay.break_duration_min = newTotal;
+    }
+  }
+  S.onBreak    = false;
   S.breakStart = null;
   document.getElementById('break-btn').textContent = '☕ Pauze';
   document.getElementById('break-btn').style.borderColor = '';
@@ -2979,8 +2992,13 @@ function confirmEndDay() {
     .toISOString().slice(0, 16);
   document.getElementById('endday-time').value = localIso;
   document.getElementById('endday-notes').value = '';
-  // Standaard 60 min pauze
-  selectBreak(60);
+
+  // Gebruik al geregistreerde pauzetijd (via pauzeknop), anders standaard 60 min
+  const recordedBreak = S.workDay?.break_duration_min || 0;
+  const snapTo = [0, 30, 60, 90];
+  const closest = snapTo.reduce((a, b) =>
+    Math.abs(b - recordedBreak) < Math.abs(a - recordedBreak) ? b : a);
+  selectBreak(closest);
 
   // Build summary
   const total   = S.jobs.length;
