@@ -735,6 +735,26 @@ textarea.iif { min-height: 70px; resize: vertical; }
 .divider { height: 1px; background: var(--border); margin: 12px 0; }
 .helper { font-size: 11px; color: var(--t3); margin-top: 4px; line-height: 1.5; }
 .tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; background: rgba(59,130,246,0.1); color: var(--accent); border: 1px solid rgba(59,130,246,0.2); font-family: var(--fm); }
+
+/* ================================================
+   CLOCKIFY
+================================================ */
+.cs-pending  { background: rgba(245,158,11,0.12);  color: var(--warn);  border: 1px solid rgba(245,158,11,0.3); }
+.cs-approved { background: rgba(34,197,94,0.12);   color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+.cs-error    { background: rgba(239,68,68,0.12);   color: var(--red);   border: 1px solid rgba(239,68,68,0.3); }
+.cs-rejected { background: rgba(148,163,184,0.12); color: var(--t2);    border: 1px solid var(--border); }
+.acard { background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;display:flex;justify-content:space-between;align-items:center; }
+.acard:hover { border-color: var(--accent); }
+.acard.err-card { border-color: rgba(239,68,68,0.35); }
+.entry-row { display:grid;grid-template-columns:1fr 1fr 2fr 60px 32px;gap:6px;align-items:end;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.4); }
+.entry-row:last-child { border-bottom: none; }
+.cust-row { display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:7px;transition:border-color .15s; }
+.val-bar { background:var(--bg3);border-radius:6px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:10px; }
+.cl-item { padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background .1s; }
+.cl-item:hover { background: var(--bg3); }
+.cl-item:last-child { border-bottom: none; }
+#m-cust-clockify { align-items: flex-start; }
+#m-cust-clockify .md { border-radius: 12px; margin: 20px auto; max-height: calc(100vh - 40px); max-width: 660px; }
 </style>
 </head>
 <body>
@@ -921,6 +941,22 @@ textarea.iif { min-height: 70px; resize: vertical; }
         <div style="padding:12px 16px;font-size:12px;color:var(--t3);">Laden...</div>
       </div>
     </div>
+
+    <!-- Clockify Goedkeuring -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:14px;">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);">Clockify Goedkeuring</div>
+        <div style="display:flex;gap:6px;" id="ca-tabs">
+          <button class="btn bp bsm" id="ca-tab-pending"  onclick="showApprovalTab('pending')">Wachtend</button>
+          <button class="btn bgh bsm" id="ca-tab-error"   onclick="showApprovalTab('error')">Fout</button>
+          <button class="btn bgh bsm" id="ca-tab-approved" onclick="showApprovalTab('approved')">Goedgekeurd</button>
+        </div>
+      </div>
+      <div id="ca-list" style="padding:8px 16px;"></div>
+    </div>
+
+    <!-- Clockify klant instellingen (render target) -->
+    <div id="admin-ccs" style="display:none;margin-top:14px;"></div>
 
   </div>
 </div>
@@ -1324,6 +1360,66 @@ textarea.iif { min-height: 70px; resize: vertical; }
       <button class="btn bgh" style="flex:1;" onclick="closeModal('m-correctday')">Annuleren</button>
       <button class="btn bp" style="flex:2;" onclick="saveCorrectDay()">Opslaan</button>
     </div>
+  </div>
+</div>
+
+<!-- CLOCKIFY REJECT MODAL -->
+<div class="mo" id="m-reject">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title" style="color:var(--red);">✗ Afwijzen</div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.6;">Geef optioneel een reden op voor de afwijzing.</p>
+    <div class="ig">
+      <label class="il">Reden (optioneel)</label>
+      <textarea class="iif" id="reject-reason" placeholder="bv. Uren kloppen niet..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-reject')">Annuleren</button>
+      <button class="btn br" style="flex:2;" onclick="confirmReject()">Afwijzen</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLOCKIFY LINK MODAL -->
+<div class="mo" id="m-clockify-link">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title">🔗 Koppel aan Clockify</div>
+    <div class="ig">
+      <label class="il">Zoek klant in Clockify</label>
+      <input type="text" class="iif" id="cl-search" placeholder="Zoeken..." oninput="filterClockifyClients()">
+    </div>
+    <div id="cl-list" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:12px;">
+      <div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Laden...</div>
+    </div>
+    <button class="btn bgh bfull" onclick="closeModal('m-clockify-link')">Annuleren</button>
+  </div>
+</div>
+
+<!-- PROJECT DEFAULT MODAL -->
+<div class="mo" id="m-project-default">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div class="mo-title">📁 Standaard Project Instellen</div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:14px;" id="pd-tech-label"></p>
+    <div class="ig">
+      <label class="il">Project</label>
+      <select class="iif" id="pd-project">
+        <option value="">— Laden... —</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn bgh" style="flex:1;" onclick="closeModal('m-project-default')">Annuleren</button>
+      <button class="btn bp" style="flex:2;" onclick="saveProjectDefault()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- KLANT CLOCKIFY INSTELLINGEN MODAL -->
+<div class="mo" id="m-cust-clockify">
+  <div class="md">
+    <div class="mo-handle"></div>
+    <div id="ccs-content"><div style="text-align:center;padding:30px;color:var(--t3);">Laden...</div></div>
   </div>
 </div>
 
@@ -2436,9 +2532,16 @@ function renderAdminView() {
     }).join('');
   }
 
-  // Customers list
+  // Customers list with Clockify status
   document.getElementById('admin-customers-list').innerHTML =
-    S.customers.map(c => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);color:var(--t2);">${c.name}</div>`).join('') ||
+    S.customers.map(c => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(51,65,85,0.3);">
+        <div>
+          <div style="font-size:12px;color:var(--text);">${escHtml(c.name)}</div>
+          <div style="font-size:10px;margin-top:1px;font-family:var(--fm);">${c.clockify_client_id ? '<span style="color:var(--green);">✓ Clockify</span>' : '<span style="color:var(--t3);">Niet gekoppeld</span>'}</div>
+        </div>
+        <button class="btn bgh bsm" onclick="openCustomerClockifySettings('${c.id}')">⚙</button>
+      </div>`).join('') ||
     '<div style="font-size:11px;color:var(--t3);">Nog geen klanten</div>';
 
   // Brands list
@@ -2446,8 +2549,9 @@ function renderAdminView() {
     S.brands.map(b => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);color:var(--t2);">${b.name}</div>`).join('') ||
     '<div style="font-size:11px;color:var(--t3);">Nog geen merken</div>';
 
-  // Load history
+  // Load history and Clockify approval
   loadWorkDayHistory();
+  showApprovalTab('pending');
 }
 
 // ================================================
@@ -2508,6 +2612,9 @@ async function loadWorkDayHistory() {
         </span>
         <button class="btn bgh bsm" onclick="loadHistoryDay('${day.id}','${day.date}')">Bekijken</button>
         ${day.status === 'closed' ? `<button class="btn bgh bsm" onclick="openCorrectDay('${day.id}','${day.actual_end}')">⏱ Corrigeren</button>` : ''}
+        ${day.clockify_status === 'pending_approval' ? `<span class="sbadge cs-pending">Clockify</span>` : ''}
+        ${day.clockify_status === 'approved'         ? `<span class="sbadge cs-approved">✓ Clockify</span>` : ''}
+        ${day.clockify_status === 'error'            ? `<span class="sbadge cs-error">⚠ Clockify</span>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -3201,6 +3308,500 @@ async function doLogout() {
 function fmtTime(ms) {
   const s = Math.floor(Math.abs(ms) / 1000);
   return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+function toLocalDatetimeInput(dt) {
+  return new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+// ================================================
+// EDGE FUNCTION HELPER
+// ================================================
+async function callEdgeFn(fnName, path = '', method = 'GET', body = null) {
+  const { data: { session } } = await sb.auth.getSession();
+  const url = `${SUPABASE_URL}/functions/v1/${fnName}${path}`;
+  const opts = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  const text = await res.text();
+  if (!res.ok) throw new Error(text);
+  return JSON.parse(text);
+}
+
+// ================================================
+// CLOCKIFY STATE
+// ================================================
+const SUP = {
+  clockifyClients: [],
+  editCustomerId:  null,
+  rejectWorkDayId: null,
+  pdCustomerId:    null,
+  pdUserId:        null,
+  pdClientId:      null,
+  approval:        { workDay: null, entries: [], projects: [] },
+};
+
+// ================================================
+// KLANT CLOCKIFY INSTELLINGEN
+// ================================================
+async function openCustomerClockifySettings(customerId) {
+  SUP.editCustomerId = customerId;
+  const el = document.getElementById('ccs-content');
+  el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--t3);">Laden...</div>';
+  openModal('m-cust-clockify');
+
+  const { data: c } = await sb.from('customers').select('*').eq('id', customerId).single();
+  if (!c) return;
+
+  // refresh local cache
+  const idx = S.customers.findIndex(x => x.id === customerId);
+  if (idx >= 0) S.customers[idx] = c; else S.customers.push(c);
+
+  const { data: techs } = await sb.from('users')
+    .select('id, full_name')
+    .eq('organization_id', S.orgId)
+    .eq('is_active', true)
+    .order('full_name');
+
+  const { data: defaults } = await sb.from('clockify_project_defaults')
+    .select('*').eq('customer_id', customerId);
+
+  const defMap = {};
+  (defaults || []).forEach(d => { defMap[d.user_id] = d; });
+  const hrs = c.standard_hours || {};
+
+  el.innerHTML = `
+    <button class="btn bgh bsm" onclick="closeModal('m-cust-clockify')" style="margin-bottom:14px;">← Sluiten</button>
+    <div style="font-size:18px;font-weight:700;margin-bottom:16px;">${escHtml(c.name)}</div>
+
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:10px;">Clockify Koppeling</div>
+      ${c.clockify_client_id ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="color:var(--green);font-size:13px;font-weight:600;">✓ Gekoppeld aan Clockify</div>
+            <div style="font-size:11px;color:var(--t3);font-family:var(--fm);margin-top:3px;">Client ID: ${escHtml(c.clockify_client_id)}</div>
+          </div>
+          <button class="btn br bsm" onclick="unlinkFromClockify('${c.id}')">Ontkoppelen</button>
+        </div>` : `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:13px;color:var(--t2);">Niet gekoppeld aan Clockify.</div>
+          <button class="btn bp bsm" onclick="openClockifyLinkModal('${c.id}')">🔗 Koppelen</button>
+        </div>`}
+    </div>
+
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:10px;">Standaard Uren</div>
+      ${!c.standard_hours ? '<div style="font-size:11px;color:var(--t3);font-style:italic;margin-bottom:10px;">Geen standaard uren — werkelijke uren worden gebruikt.</div>' : ''}
+      <div class="two-col" style="margin-bottom:8px;">
+        <div class="ig" style="margin-bottom:0;"><label class="il">Ochtend start</label><input type="time" class="iif" id="sh-ms" value="${hrs.morning_start||'08:00'}"></div>
+        <div class="ig" style="margin-bottom:0;"><label class="il">Ochtend einde</label><input type="time" class="iif" id="sh-me" value="${hrs.morning_end||'12:00'}"></div>
+      </div>
+      <div class="two-col" style="margin-bottom:12px;">
+        <div class="ig" style="margin-bottom:0;"><label class="il">Middag start</label><input type="time" class="iif" id="sh-as" value="${hrs.afternoon_start||'13:00'}"></div>
+        <div class="ig" style="margin-bottom:0;"><label class="il">Middag einde</label><input type="time" class="iif" id="sh-ae" value="${hrs.afternoon_end||'17:00'}"></div>
+      </div>
+      <button class="btn bp bsm" onclick="saveStandardHours('${c.id}')">Opslaan</button>
+      ${c.standard_hours ? `<button class="btn br bsm" style="margin-left:6px;" onclick="clearStandardHours('${c.id}')">Wissen</button>` : ''}
+    </div>
+
+    ${c.clockify_client_id ? `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:10px;">Standaard Projecten per Technicus</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr>
+          <th style="text-align:left;color:var(--t3);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:4px 0 8px;border-bottom:1px solid var(--border);">Technicus</th>
+          <th style="text-align:left;color:var(--t3);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:4px 0 8px;border-bottom:1px solid var(--border);">Standaard Project</th>
+          <th style="border-bottom:1px solid var(--border);"></th>
+        </tr></thead>
+        <tbody>${(techs||[]).map(t => {
+          const def = defMap[t.id];
+          return `<tr>
+            <td style="padding:8px 0;color:var(--text);">${escHtml(t.full_name)}</td>
+            <td style="padding:8px 0;color:${def?'var(--text)':'var(--t3)'};font-style:${def?'normal':'italic'};">${def?escHtml(def.clockify_project_name):'— niet ingesteld —'}</td>
+            <td style="padding:8px 0;text-align:right;"><button class="btn bgh bsm" onclick="openProjectDefaultModal('${c.id}','${t.id}','${escHtml(c.clockify_client_id)}','${escHtml(t.full_name)}')">Bewerken</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>` : `<div style="font-size:12px;color:var(--t3);font-style:italic;">Koppel eerst de klant aan Clockify om standaard projecten in te stellen.</div>`}`;
+}
+
+async function openClockifyLinkModal(customerId) {
+  SUP.editCustomerId = customerId;
+  SUP.clockifyClients = [];
+  document.getElementById('cl-search').value = '';
+  openModal('m-clockify-link');
+  const listEl = document.getElementById('cl-list');
+  listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Laden...</div>';
+  try {
+    const clients = await callEdgeFn('clockify-proxy', '/clients');
+    SUP.clockifyClients = clients || [];
+    renderClockifyClientList(SUP.clockifyClients);
+  } catch (err) {
+    listEl.innerHTML = `<div style="padding:12px;color:var(--red);font-size:12px;">Fout: ${escHtml(err.message)}</div>`;
+  }
+}
+
+function renderClockifyClientList(clients) {
+  const el = document.getElementById('cl-list');
+  if (!clients.length) { el.innerHTML = '<div style="padding:12px;color:var(--t3);font-size:12px;">Geen resultaten</div>'; return; }
+  el.innerHTML = clients.map(c =>
+    `<div class="cl-item" onclick="selectClockifyClient('${escHtml(c.id)}','${escHtml(c.name)}')">${escHtml(c.name)}</div>`
+  ).join('');
+}
+
+function filterClockifyClients() {
+  const q = document.getElementById('cl-search').value.toLowerCase();
+  const filtered = q ? SUP.clockifyClients.filter(c => c.name.toLowerCase().includes(q)) : SUP.clockifyClients;
+  renderClockifyClientList(filtered);
+}
+
+async function selectClockifyClient(clockifyClientId, clockifyClientName) {
+  const customerId = SUP.editCustomerId;
+  await sb.from('customers').update({ clockify_client_id: clockifyClientId }).eq('id', customerId);
+  closeModal('m-clockify-link');
+  toast(`Gekoppeld aan Clockify: ${clockifyClientName}`);
+  openCustomerClockifySettings(customerId);
+}
+
+async function unlinkFromClockify(customerId) {
+  confirm('Clockify Ontkoppelen', 'Weet je zeker dat je deze klant wilt ontkoppelen van Clockify?', async () => {
+    await sb.from('customers').update({ clockify_client_id: null }).eq('id', customerId);
+    toast('Ontkoppeld van Clockify');
+    openCustomerClockifySettings(customerId);
+  });
+}
+
+async function saveStandardHours(customerId) {
+  const standardHours = {
+    morning_start:   document.getElementById('sh-ms').value,
+    morning_end:     document.getElementById('sh-me').value,
+    afternoon_start: document.getElementById('sh-as').value,
+    afternoon_end:   document.getElementById('sh-ae').value,
+  };
+  await sb.from('customers').update({ standard_hours: standardHours }).eq('id', customerId);
+  toast('Standaard uren opgeslagen');
+  openCustomerClockifySettings(customerId);
+}
+
+async function clearStandardHours(customerId) {
+  confirm('Standaard uren wissen', 'Werkelijke uren worden gebruikt bij pre-vulling.', async () => {
+    await sb.from('customers').update({ standard_hours: null }).eq('id', customerId);
+    toast('Standaard uren gewist');
+    openCustomerClockifySettings(customerId);
+  });
+}
+
+async function openProjectDefaultModal(customerId, userId, clockifyClientId, techName) {
+  SUP.pdCustomerId = customerId;
+  SUP.pdUserId     = userId;
+  SUP.pdClientId   = clockifyClientId;
+  document.getElementById('pd-tech-label').textContent = `Technicus: ${techName}`;
+  document.getElementById('pd-project').innerHTML = '<option value="">Laden...</option>';
+  openModal('m-project-default');
+  try {
+    const projects = await callEdgeFn('clockify-proxy', `/projects?clientId=${encodeURIComponent(clockifyClientId)}`);
+    const sel = document.getElementById('pd-project');
+    sel.innerHTML = '<option value="">— Selecteer project —</option>' +
+      (projects||[]).map(p => `<option value="${escHtml(p.id)}" data-name="${escHtml(p.name)}">${escHtml(p.name)}</option>`).join('');
+  } catch (err) {
+    document.getElementById('pd-project').innerHTML = `<option value="">Fout: ${escHtml(err.message)}</option>`;
+  }
+}
+
+async function saveProjectDefault() {
+  const sel = document.getElementById('pd-project');
+  const projectId   = sel.value;
+  const projectName = sel.options[sel.selectedIndex]?.dataset.name || '';
+  if (!projectId) { toast('Selecteer een project'); return; }
+  await sb.from('clockify_project_defaults').upsert({
+    customer_id:           SUP.pdCustomerId,
+    user_id:               SUP.pdUserId,
+    clockify_project_id:   projectId,
+    clockify_project_name: projectName,
+  }, { onConflict: 'customer_id,user_id' });
+  closeModal('m-project-default');
+  toast('Standaard project opgeslagen');
+  openCustomerClockifySettings(SUP.pdCustomerId);
+}
+
+// ================================================
+// CLOCKIFY GOEDKEURING
+// ================================================
+async function showApprovalTab(tab) {
+  ['pending','error','approved'].forEach(t => {
+    const btn = document.getElementById('ca-tab-' + t);
+    if (btn) btn.className = t === tab ? 'btn bp bsm' : 'btn bgh bsm';
+  });
+
+  const el = document.getElementById('ca-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);">Laden...</div>';
+
+  const statusMap = { pending: 'pending_approval', error: 'error', approved: 'approved' };
+
+  const { data: orgCustomers } = await sb.from('customers').select('id').eq('organization_id', S.orgId);
+  const custIds = (orgCustomers||[]).map(c => c.id);
+  if (!custIds.length) { el.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--t3);">Geen klanten gevonden</div>'; return; }
+
+  const { data: days } = await sb.from('work_days')
+    .select('*, users(full_name), customers(name)')
+    .eq('clockify_status', statusMap[tab])
+    .in('customer_id', custIds)
+    .order('date', { ascending: false });
+
+  if (!days?.length) {
+    el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Geen items</div>`;
+    return;
+  }
+
+  el.innerHTML = days.map(wd => {
+    const dateStr  = new Date(wd.date + 'T00:00:00').toLocaleDateString('nl-BE', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+    const startStr = wd.actual_start ? new Date(wd.actual_start).toLocaleTimeString('nl-BE', { hour:'2-digit', minute:'2-digit' }) : '—';
+    const endStr   = wd.actual_end   ? new Date(wd.actual_end).toLocaleTimeString('nl-BE',   { hour:'2-digit', minute:'2-digit' }) : '—';
+    const errCls   = tab === 'error' ? 'err-card' : '';
+    const badge    = tab === 'pending' ? 'cs-pending' : tab === 'error' ? 'cs-error' : 'cs-approved';
+    const badgeTxt = tab === 'pending' ? 'Wacht' : tab === 'error' ? 'Fout' : 'OK';
+    return `
+    <div class="acard ${errCls}" onclick="openApprovalDetail('${wd.id}','${tab}')">
+      <div>
+        <div style="font-size:13px;font-weight:600;">${escHtml(wd.customers?.name??'—')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:2px;">${escHtml(wd.users?.full_name??'—')} · ${dateStr}</div>
+        <div style="font-size:11px;color:var(--t3);font-family:var(--fm);margin-top:2px;">${startStr} → ${endStr}</div>
+        ${tab === 'error' && wd.clockify_error ? `<div style="font-size:11px;color:var(--red);margin-top:2px;">${escHtml(wd.clockify_error)}</div>` : ''}
+      </div>
+      <span class="sbadge ${badge}">${badgeTxt}</span>
+    </div>`;
+  }).join('');
+}
+
+async function openApprovalDetail(workDayId, mode) {
+  const el = document.getElementById('ca-list');
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);">Laden...</div>';
+
+  const { data: wd } = await sb.from('work_days')
+    .select('*, users(id, full_name), customers(id, name, clockify_client_id, standard_hours)')
+    .eq('id', workDayId).single();
+
+  if (!wd) { el.innerHTML = '<div style="padding:20px;color:var(--red);">Werkdag niet gevonden</div>'; return; }
+  SUP.approval.workDay = wd;
+
+  let projects = [];
+  if (wd.customers?.clockify_client_id) {
+    try { projects = await callEdgeFn('clockify-proxy', `/projects?clientId=${encodeURIComponent(wd.customers.clockify_client_id)}`); }
+    catch(e) { console.warn('Projects load error:', e.message); }
+  }
+  SUP.approval.projects = projects || [];
+
+  const actualStart = wd.actual_start ? new Date(wd.actual_start) : null;
+  const actualEnd   = wd.actual_end   ? new Date(wd.actual_end)   : null;
+  const stdHrs      = wd.customers?.standard_hours;
+  let billableStart, billableEnd, showDevWarning = false;
+
+  if (mode === 'approved' && wd.billable_start && wd.billable_end) {
+    billableStart = new Date(wd.billable_start);
+    billableEnd   = new Date(wd.billable_end);
+  } else if (stdHrs && actualStart && actualEnd) {
+    const dateStr = wd.date;
+    const stdStart = new Date(`${dateStr}T${stdHrs.morning_start}:00`);
+    const stdEnd   = new Date(`${dateStr}T${stdHrs.afternoon_end}:00`);
+    if (Math.abs(actualStart - stdStart) <= 1200000 && Math.abs(actualEnd - stdEnd) <= 1200000) {
+      billableStart = stdStart; billableEnd = stdEnd;
+    } else {
+      billableStart = actualStart; billableEnd = actualEnd; showDevWarning = true;
+    }
+  } else {
+    billableStart = actualStart; billableEnd = actualEnd;
+  }
+
+  const { data: defProj } = await sb.from('clockify_project_defaults')
+    .select('*').eq('customer_id', wd.customer_id).eq('user_id', wd.user_id).maybeSingle();
+
+  if (mode === 'approved' && wd.billable_start) {
+    const { data: existingEntries } = await sb.from('clockify_entries')
+      .select('*').eq('work_day_id', workDayId).order('start_time');
+    SUP.approval.entries = (existingEntries||[]).map(e => ({
+      start: toLocalDatetimeInput(new Date(e.start_time)),
+      end:   toLocalDatetimeInput(new Date(e.end_time)),
+      clockify_project_id:   e.clockify_project_id,
+      clockify_project_name: e.clockify_project_name,
+    }));
+  } else {
+    SUP.approval.entries = [{
+      start: billableStart ? toLocalDatetimeInput(billableStart) : '',
+      end:   billableEnd   ? toLocalDatetimeInput(billableEnd)   : '',
+      clockify_project_id:   defProj?.clockify_project_id   || '',
+      clockify_project_name: defProj?.clockify_project_name || '',
+    }];
+  }
+
+  const dateStr      = new Date(wd.date + 'T00:00:00').toLocaleDateString('nl-BE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const actualStartS = actualStart ? actualStart.toLocaleTimeString('nl-BE', { hour:'2-digit', minute:'2-digit' }) : '—';
+  const actualEndS   = actualEnd   ? actualEnd.toLocaleTimeString('nl-BE',   { hour:'2-digit', minute:'2-digit' }) : '—';
+  const isCorrection = mode === 'approved';
+
+  el.innerHTML = `
+    <div style="max-width:700px;">
+      <button class="btn bgh bsm" onclick="showApprovalTab('${mode}')" style="margin-bottom:12px;">← Terug</button>
+
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:16px;font-weight:700;">${escHtml(wd.customers?.name??'—')}</div>
+        <div style="font-size:12px;color:var(--t2);margin-top:3px;">${escHtml(wd.users?.full_name??'—')} · ${dateStr}</div>
+        <div style="font-size:11px;color:var(--t3);font-family:var(--fm);margin-top:4px;">Werkelijke uren: <span style="color:var(--text);">${actualStartS} → ${actualEndS}</span></div>
+      </div>
+
+      ${showDevWarning ? `<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--warn);">⚠ Uren wijken meer dan 20 min af van het standaard schema — controleer de factureerbare uren.</div>` : ''}
+
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:10px;">Factureerbare Uren</div>
+        <div class="two-col">
+          <div class="ig" style="margin-bottom:0;"><label class="il">Start</label><input type="datetime-local" class="iif" id="ap-bs" value="${billableStart?toLocalDatetimeInput(billableStart):''}" onchange="validateApproval()"></div>
+          <div class="ig" style="margin-bottom:0;"><label class="il">Einde</label><input type="datetime-local" class="iif" id="ap-be" value="${billableEnd?toLocalDatetimeInput(billableEnd):''}" onchange="validateApproval()"></div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);">Tijdsegmenten</div>
+          <button class="btn bgh bsm" onclick="addApprovalEntry()">+ Segment</button>
+        </div>
+        <div id="ap-entries"></div>
+        <div class="val-bar" id="ap-validation">
+          <span id="ap-val-text" style="color:var(--t3);">—</span>
+          <span id="ap-val-icon" style="font-size:16px;">—</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        ${!isCorrection ? `
+          <button class="btn br" style="flex:1;" onclick="openRejectModal('${workDayId}')">✗ Afwijzen</button>
+          <button class="btn bg" style="flex:2;" id="ap-approve-btn" onclick="approveWorkDay('${workDayId}',false)" disabled>✓ Goedkeuren &amp; Pushen</button>
+        ` : `
+          <button class="btn bw bfull" id="ap-approve-btn" onclick="approveWorkDay('${workDayId}',true)" disabled>↺ Corrigeren &amp; Opnieuw Pushen</button>
+        `}
+      </div>
+    </div>`;
+
+  renderApprovalEntries();
+}
+
+function renderApprovalEntries() {
+  const el = document.getElementById('ap-entries');
+  if (!el) return;
+  const projects = SUP.approval.projects;
+  el.innerHTML = SUP.approval.entries.map((e, i) => {
+    const projOpts = projects.map(p =>
+      `<option value="${escHtml(p.id)}" data-name="${escHtml(p.name)}" ${p.id === e.clockify_project_id ? 'selected' : ''}>${escHtml(p.name)}</option>`
+    ).join('');
+    const startDt = e.start ? new Date(e.start) : null;
+    const endDt   = e.end   ? new Date(e.end)   : null;
+    const durMs   = (startDt && endDt) ? endDt - startDt : 0;
+    const durStr  = durMs > 0 ? `${Math.floor(durMs/3600000)}u${String(Math.floor((durMs%3600000)/60000)).padStart(2,'0')}m` : '—';
+    return `
+    <div class="entry-row">
+      <div><div class="il" style="margin-bottom:3px;">Start</div><input type="datetime-local" class="iif" style="font-size:11px;padding:5px 8px;" value="${e.start}" onchange="updateEntryField(${i},'start',this.value)"></div>
+      <div><div class="il" style="margin-bottom:3px;">Einde</div><input type="datetime-local" class="iif" style="font-size:11px;padding:5px 8px;" value="${e.end}" onchange="updateEntryField(${i},'end',this.value)"></div>
+      <div><div class="il" style="margin-bottom:3px;">Project</div><select class="iif" style="font-size:11px;padding:5px 8px;" onchange="updateEntryProject(${i},this)"><option value="">— Project —</option>${projOpts}</select></div>
+      <div style="font-family:var(--fm);font-size:11px;color:var(--t3);white-space:nowrap;padding-bottom:2px;">${durStr}</div>
+      <div>${SUP.approval.entries.length > 1 ? `<button class="btn br bsm" style="padding:4px 7px;" onclick="removeApprovalEntry(${i})">✕</button>` : ''}</div>
+    </div>`;
+  }).join('');
+  validateApproval();
+}
+
+function updateEntryField(idx, field, value) { SUP.approval.entries[idx][field] = value; renderApprovalEntries(); }
+function updateEntryProject(idx, sel) {
+  SUP.approval.entries[idx].clockify_project_id   = sel.value;
+  SUP.approval.entries[idx].clockify_project_name = sel.options[sel.selectedIndex]?.dataset.name || '';
+}
+function addApprovalEntry() {
+  const last = SUP.approval.entries[SUP.approval.entries.length - 1];
+  SUP.approval.entries.push({ start: last?.end||'', end:'', clockify_project_id:'', clockify_project_name:'' });
+  renderApprovalEntries();
+}
+function removeApprovalEntry(idx) { SUP.approval.entries.splice(idx, 1); renderApprovalEntries(); }
+
+function validateApproval() {
+  const valText = document.getElementById('ap-val-text');
+  const valIcon = document.getElementById('ap-val-icon');
+  const approveBtn = document.getElementById('ap-approve-btn');
+  if (!valText) return;
+  const bsEl = document.getElementById('ap-bs');
+  const beEl = document.getElementById('ap-be');
+  const entries = SUP.approval.entries;
+  const setResult = (txt, ok) => {
+    valText.innerHTML = txt;
+    valText.style.color = ok ? 'var(--green)' : (ok === null ? 'var(--t3)' : 'var(--red)');
+    valIcon.textContent = ok ? '✓' : (ok === null ? '—' : '✗');
+    valIcon.style.color = valText.style.color;
+    if (approveBtn) approveBtn.disabled = !ok;
+  };
+  if (entries.some(e => !e.clockify_project_id)) return setResult('Selecteer een project voor elk segment', false);
+  if (!bsEl?.value || !beEl?.value || !entries.length) return setResult('Vul alle tijden in', null);
+  const bs = new Date(bsEl.value), be = new Date(beEl.value);
+  const billableMs = be - bs;
+  const sorted = [...entries].map(e => ({ s: new Date(e.start), e: new Date(e.end) })).filter(e => e.e > e.s).sort((a,b) => a.s - b.s);
+  let totalMs = 0, hasOverlap = false, hasGap = false;
+  sorted.forEach((e, i) => {
+    totalMs += e.e - e.s;
+    if (i > 0) { if (e.s < sorted[i-1].e) hasOverlap = true; if (e.s > sorted[i-1].e) hasGap = true; }
+  });
+  if (hasOverlap) return setResult('Segmenten overlappen — pas de tijden aan', false);
+  if (hasGap)     return setResult('Er zijn gaten tussen segmenten', false);
+  const fmtDur = ms => { const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000); return `${h}u${String(m).padStart(2,'0')}m`; };
+  if (Math.abs(totalMs - billableMs) > 60000) return setResult(`Totaal: <b>${fmtDur(totalMs)}</b> · Factureerbaar: <b>${fmtDur(billableMs)}</b> — komen niet overeen`, false);
+  setResult(`Totaal: <b>${fmtDur(totalMs)}</b>`, true);
+}
+
+async function approveWorkDay(workDayId, correction) {
+  const bsEl = document.getElementById('ap-bs');
+  const beEl = document.getElementById('ap-be');
+  if (!bsEl?.value || !beEl?.value) { toast('Vul factureerbare uren in'); return; }
+  const btn = document.getElementById('ap-approve-btn');
+  const origTxt = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = 'Bezig...'; }
+  try {
+    const payload = {
+      work_day_id:        workDayId,
+      billable_start:     new Date(bsEl.value).toISOString(),
+      billable_end:       new Date(beEl.value).toISOString(),
+      entries:            SUP.approval.entries.map(e => ({
+        start: new Date(e.start).toISOString(), end: new Date(e.end).toISOString(),
+        clockify_project_id: e.clockify_project_id, clockify_project_name: e.clockify_project_name,
+      })),
+      supervisor_user_id: S.user.id,
+      ...(correction ? { mode: 'correct' } : {}),
+    };
+    await callEdgeFn('push-to-clockify', '', 'POST', payload);
+    toast('✓ Succesvol gepushed naar Clockify');
+    showApprovalTab('pending');
+  } catch (err) {
+    toast('Fout: ' + err.message);
+    if (btn) { btn.disabled = false; btn.textContent = origTxt; }
+  }
+}
+
+function openRejectModal(workDayId) {
+  SUP.rejectWorkDayId = workDayId;
+  document.getElementById('reject-reason').value = '';
+  openModal('m-reject');
+}
+
+async function confirmReject() {
+  const reason = document.getElementById('reject-reason').value.trim();
+  await sb.from('work_days').update({
+    clockify_status: 'rejected',
+    clockify_error:  reason || null,
+  }).eq('id', SUP.rejectWorkDayId);
+  closeModal('m-reject');
+  toast('Afgewezen');
+  showApprovalTab('pending');
 }
 
 function escHtml(str) {
