@@ -3551,7 +3551,7 @@ async function showApprovalTab(tab) {
   if (!custIds.length) { el.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--t3);">Geen klanten gevonden</div>'; return; }
 
   const { data: days } = await sb.from('work_days')
-    .select('*, users(full_name), customers(name)')
+    .select('*, users!work_days_user_id_fkey(full_name), customers(name)')
     .eq('clockify_status', statusMap[tab])
     .in('customer_id', custIds)
     .order('date', { ascending: false });
@@ -3586,7 +3586,7 @@ async function openApprovalDetail(workDayId, mode) {
   el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);">Laden...</div>';
 
   const { data: wd } = await sb.from('work_days')
-    .select('*, users(id, full_name), customers(id, name, clockify_client_id, standard_hours)')
+    .select('*, users!work_days_user_id_fkey(id, full_name), customers(id, name, clockify_client_id, standard_hours)')
     .eq('id', workDayId).single();
 
   if (!wd) { el.innerHTML = '<div style="padding:20px;color:var(--red);">Werkdag niet gevonden</div>'; return; }
