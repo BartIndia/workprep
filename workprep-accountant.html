@@ -398,7 +398,7 @@ async function loadReport() {
 
   // Work days in period for this customer
   const { data: wds } = await sb.from('work_days')
-    .select('id, user_id, date, actual_start, actual_end, break_duration_min, users(id, full_name)')
+    .select('id, user_id, date, actual_start, actual_end, break_duration_min, users!work_days_user_id_fkey(id, full_name)')
     .eq('customer_id', S.customerId)
     .gte('date', from)
     .lte('date', to)
